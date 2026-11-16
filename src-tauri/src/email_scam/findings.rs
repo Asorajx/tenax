@@ -7,12 +7,10 @@
 
 use std::time::Instant;
 
-use serde::Serialize;
-
 use super::content::{Content, Source};
 use super::links::Report;
 use super::signs::{self, Found, Group, Weight};
-use crate::finding::{Detail, Finding, Status, Step, UrlItem, count_of, detail};
+use crate::finding::{Detail, Finding, Status, Step, UrlItem, Verdict, count_of, detail};
 
 // How many rows a card lists before the rest are summarised.
 const MAX_ROWS: usize = 6;
@@ -473,13 +471,6 @@ pub fn cards(
 // =========================
 // Verdict
 // =========================
-
-#[derive(Serialize)]
-pub struct Verdict {
-    pub status: Status,
-    pub headline: String,
-    pub detail: String,
-}
 
 // The overall result, from the cards. A limited analysis is never reported as a clean one.
 pub fn verdict(cards: &[Card]) -> Verdict {

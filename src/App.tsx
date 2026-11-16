@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import PasswordStrength from "./pages/PasswordStrength";
 import PlannedTool from "./pages/PlannedTool";
 import Settings from "./pages/Settings";
+import UrlChecker from "./pages/UrlChecker";
 import WindowsSecurity from "./pages/WindowsSecurity";
 
 /* =========================
@@ -74,6 +75,15 @@ export default function App() {
 
     if (id === "home") return <Home onNavigate={setPage} />;
     if (id === "settings") return <Settings theme={theme} onThemeChange={setTheme} />;
+    if (tool?.id === "url-check") {
+      return (
+        <UrlChecker
+          tool={tool}
+          handoff={handoff?.tool === "url-check" ? handoff : null}
+          onHandoffUsed={clearHandoff}
+        />
+      );
+    }
     if (tool?.id === "email-scam") return <EmailScam tool={tool} onAnalyseUrl={analyseUrl} />;
     if (tool?.id === "email-headers") return <EmailHeaders tool={tool} />;
     if (tool?.id === "password-breach") return <BreachedPasswords tool={tool} onCheckStrength={(password) => sendTo("password-strength", password)} />;

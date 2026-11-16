@@ -233,7 +233,7 @@ const REDIRECT_KEYS: &[&str] = &[
 
 // The name a site is registered under, such as "paypal.com" for "www.paypal.com", worked out
 // with the public suffix list so that endings like "co.uk" are handled correctly.
-fn registered(host: &str) -> Option<String> {
+pub(crate) fn registered(host: &str) -> Option<String> {
     psl::domain(host.as_bytes()).map(|d| String::from_utf8_lossy(d.as_bytes()).into_owned())
 }
 
@@ -941,10 +941,18 @@ pub fn analyse(links: &[RawLink], elements: &[Element], text: &str) -> Report {
     let mut limits = Vec::new();
     if context.hidden > 0 {
         limits.push(format!(
-            "{} {} through a tracking or shortening service, so where {} finally lead is not visible.",
+            "{} {} through a tracking or shortening service, so where {} is not visible.",
             count_of(context.hidden, "link"),
-            if context.hidden == 1 { "passes" } else { "pass" },
-            if context.hidden == 1 { "it" } else { "they" },
+            if context.hidden == 1 {
+                "passes"
+            } else {
+                "pass"
+            },
+            if context.hidden == 1 {
+                "it finally leads"
+            } else {
+                "they finally lead"
+            },
         ));
     }
     if context.unresolved > 0 {

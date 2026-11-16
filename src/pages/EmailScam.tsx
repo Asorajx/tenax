@@ -2,21 +2,14 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Tool } from "../app/tools";
 import ActivityLog from "../components/ActivityLog";
-import FindingCard, { type Finding, type FindingStatus } from "../components/Finding";
+import FindingCard, { type Finding } from "../components/Finding";
 import PasteBox from "../components/PasteBox";
 import ToolPage from "../components/ToolPage";
+import VerdictBlock, { type Verdict } from "../components/VerdictBlock";
 
 /* =========================
    Email Scam Checker
    ========================= */
-
-/* The overall result, worked out in Rust. It must match the Verdict struct in findings.rs. */
-/* A limited analysis is its own result, because it is not a clean one. */
-interface Verdict {
-  status: FindingStatus;
-  headline: string;
-  detail: string;
-}
 
 interface ScamReport {
   verdict: Verdict;
@@ -80,12 +73,7 @@ export default function EmailScam({ tool, onAnalyseUrl }: EmailScamProps) {
 
       {state === "done" && report && (
         <>
-          <div role="status">
-            <p className="verdict" data-status={report.verdict.status}>
-              {report.verdict.headline}
-            </p>
-            <p className="verdict-detail">{report.verdict.detail}</p>
-          </div>
+          <VerdictBlock verdict={report.verdict} />
           <div className="findings">
             {report.findings.map((finding) => (
               <FindingCard

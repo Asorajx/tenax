@@ -25,7 +25,7 @@ use std::time::Instant;
 
 use serde::Serialize;
 
-use crate::finding::{Finding, Step, count_of};
+use crate::finding::{Finding, Step, Verdict, count_of};
 
 // More than this is not an email, so it is refused rather than slowing the app down.
 const MAX_LENGTH: usize = 1_000_000;
@@ -35,7 +35,7 @@ const MIN_WORDS: usize = 3;
 
 #[derive(Serialize)]
 pub struct ScamReport {
-    pub verdict: findings::Verdict,
+    pub verdict: Verdict,
     pub findings: Vec<Finding>,
 }
 

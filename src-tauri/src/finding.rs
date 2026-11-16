@@ -31,6 +31,15 @@ pub struct Detail {
     pub reason: Option<String>,
 }
 
+// The overall result of a tool that looks at something and gives an answer in words. A limited
+// analysis has its own status because it is not a clean result.
+#[derive(Debug, Serialize)]
+pub struct Verdict {
+    pub status: Status,
+    pub headline: String,
+    pub detail: String,
+}
+
 // A web address a check found, with a short assessment of it. Any tool can list these, and
 // the interface shows them as plain text that cannot be clicked.
 #[derive(Debug, Clone, Serialize)]

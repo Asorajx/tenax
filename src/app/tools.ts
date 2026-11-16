@@ -81,8 +81,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
           "Redirects, shorteners and unusual encoding",
           "Reputation from an external service, if enabled",
         ],
-        privacy: "Structure checks run locally. Reputation lookups send the URL to a third party.",
-        ready: false,
+        privacy: "Runs entirely on this device. The address is never opened, followed or sent anywhere.",
+        ready: true,
       },
       {
         id: "email-scam",
