@@ -122,8 +122,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         icon: Globe,
         summary: "Query DNS records for a domain.",
         plan: ["A, AAAA, MX, TXT, NS and CNAME records", "Mail security records such as SPF and DMARC"],
-        privacy: "Sends the domain name to a DNS resolver.",
-        ready: false,
+        privacy: "Sends the domain name to the DNS server this PC already uses, which may pass it on, as it does for any website you visit. Nothing else leaves this PC.",
+        ready: true,
       },
       {
         id: "ip-info",

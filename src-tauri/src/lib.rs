@@ -1,4 +1,5 @@
 mod breached_passwords;
+mod dns_lookup;
 mod email_headers;
 mod email_scam;
 mod finding;
@@ -12,6 +13,7 @@ pub fn run() {
         // Every command the interface is allowed to call is listed here.
         .invoke_handler(tauri::generate_handler![
             breached_passwords::check_breached_password,
+            dns_lookup::lookup_dns,
             email_headers::analyse_email_headers,
             email_scam::check_email_scam,
             url_check::check_url,

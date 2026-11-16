@@ -69,10 +69,12 @@ export default function UrlChecker({ tool, handoff, onHandoffUsed }: UrlCheckerP
     onHandoffUsed();
   }, [handoff, onHandoffUsed]);
 
-  /* Results belong to the address that was checked, so changing it clears them. */
+  /* Results belong to the address that was checked, so changing it clears them. If a check is */
+  /* still waiting for its answer, that answer is thrown away. */
   function changeUrl(next: string) {
     setUrl(next);
-    if (state === "done" || state === "error") setState("idle");
+    if (state === "loading") latest.current++;
+    if (state !== "idle") setState("idle");
   }
 
   /* Pressing Check, or Enter, checks what is in the box. */

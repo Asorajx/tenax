@@ -3,6 +3,7 @@ import { useTheme } from "./app/theme";
 import { ALL_TOOLS, TOOL_GROUPS } from "./app/tools";
 import Sidebar from "./components/Sidebar";
 import BreachedPasswords from "./pages/BreachedPasswords";
+import DnsLookup from "./pages/DnsLookup";
 import EmailHeaders from "./pages/EmailHeaders";
 import EmailScam from "./pages/EmailScam";
 import Home from "./pages/Home";
@@ -84,6 +85,7 @@ export default function App() {
         />
       );
     }
+    if (tool?.id === "dns-lookup") return <DnsLookup tool={tool} />;
     if (tool?.id === "email-scam") return <EmailScam tool={tool} onAnalyseUrl={analyseUrl} />;
     if (tool?.id === "email-headers") return <EmailHeaders tool={tool} />;
     if (tool?.id === "password-breach") return <BreachedPasswords tool={tool} onCheckStrength={(password) => sendTo("password-strength", password)} />;
