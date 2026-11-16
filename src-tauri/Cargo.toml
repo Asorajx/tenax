@@ -30,6 +30,10 @@ url = "2.5.8"
 psl = "2.1.255"
 idna = "1.1.0"
 scraper = "0.29.0"
+# TLS Certificate: the handshake through Windows (Schannel), and reading the certificate it returns.
+# native-tls was already used by reqwest above. x509-parser is pure Rust, with no unsafe code of Tenax's own.
+native-tls = "0.2.18"
+x509-parser = "0.18.1"
 
 # Microsoft's Windows API bindings. Tauri already includes this crate.
 [target.'cfg(windows)'.dependencies]

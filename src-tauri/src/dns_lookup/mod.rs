@@ -49,7 +49,7 @@ pub struct DnsReport {
 
 // Turns what was typed into the name to ask about. A pasted web address gives its site name,
 // and an international name is written the way DNS needs it.
-fn normalise(input: &str) -> Result<String, String> {
+pub(crate) fn normalise(input: &str) -> Result<String, String> {
     let text = input.trim();
     if text.is_empty() {
         return Err("Enter a domain name to look up.".to_string());

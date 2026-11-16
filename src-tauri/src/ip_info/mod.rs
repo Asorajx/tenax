@@ -15,9 +15,9 @@
 // external.rs  the ipinfo.io request, the only web request
 // findings.rs  turns what was found into cards, with no network or Windows code
 
-mod address;
+pub(crate) mod address;
 mod countries;
-mod external;
+pub(crate) mod external;
 mod findings;
 
 #[cfg(test)]
