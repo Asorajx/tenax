@@ -5,26 +5,27 @@
 
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use windows::core::{w, Result, PCWSTR};
 use windows::Win32::NetworkManagement::WindowsFirewall::{
-    INetFwPolicy2, NetFwPolicy2, NET_FW_PROFILE2_DOMAIN, NET_FW_PROFILE2_PRIVATE,
-    NET_FW_PROFILE2_PUBLIC,
+    INetFwPolicy2, NET_FW_PROFILE2_DOMAIN, NET_FW_PROFILE2_PRIVATE, NET_FW_PROFILE2_PUBLIC,
+    NetFwPolicy2,
 };
 use windows::Win32::System::Com::{
-    CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER,
-    COINIT_APARTMENTTHREADED,
+    CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx,
+    CoUninitialize,
+};
+use windows::Win32::System::Registry::{
+    HKEY_LOCAL_MACHINE, RRF_RT_REG_DWORD, RRF_RT_REG_SZ, RegGetValueW,
 };
 use windows::Win32::System::SecurityCenter::{
-    IWSCProductList, WSCProductList, WSC_SECURITY_PRODUCT_STATE_EXPIRED,
-    WSC_SECURITY_PRODUCT_STATE_ON, WSC_SECURITY_PRODUCT_STATE_SNOOZED,
-    WSC_SECURITY_PRODUCT_UP_TO_DATE, WSC_SECURITY_PROVIDER, WSC_SECURITY_PROVIDER_ANTIVIRUS,
-    WSC_SECURITY_PROVIDER_FIREWALL,
+    IWSCProductList, WSC_SECURITY_PRODUCT_STATE_EXPIRED, WSC_SECURITY_PRODUCT_STATE_ON,
+    WSC_SECURITY_PRODUCT_STATE_SNOOZED, WSC_SECURITY_PRODUCT_UP_TO_DATE, WSC_SECURITY_PROVIDER,
+    WSC_SECURITY_PROVIDER_ANTIVIRUS, WSC_SECURITY_PROVIDER_FIREWALL, WSCProductList,
 };
-use windows::Win32::System::Registry::{RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_REG_DWORD, RRF_RT_REG_SZ};
 use windows::Win32::System::UpdateAgent::{
     AutomaticUpdates, IAutomaticUpdates2, ISystemInformation, SystemInformation,
 };
 use windows::Win32::System::Variant::{VARIANT, VT_DATE};
+use windows::core::{PCWSTR, Result, w};
 
 use crate::finding::Step;
 
@@ -111,6 +112,7 @@ fn traced<T>(
             ok,
             result,
             ms: started.elapsed().as_secs_f64() * 1000.0,
+            redact: None,
         },
     ));
     outcome
@@ -147,9 +149,15 @@ fn firewall() -> Result<FirewallProfiles> {
     unsafe {
         let policy: INetFwPolicy2 = CoCreateInstance(&NetFwPolicy2, None, CLSCTX_INPROC_SERVER)?;
         Ok(FirewallProfiles {
-            domain: policy.get_FirewallEnabled(NET_FW_PROFILE2_DOMAIN)?.as_bool(),
-            private: policy.get_FirewallEnabled(NET_FW_PROFILE2_PRIVATE)?.as_bool(),
-            public: policy.get_FirewallEnabled(NET_FW_PROFILE2_PUBLIC)?.as_bool(),
+            domain: policy
+                .get_FirewallEnabled(NET_FW_PROFILE2_DOMAIN)?
+                .as_bool(),
+            private: policy
+                .get_FirewallEnabled(NET_FW_PROFILE2_PRIVATE)?
+                .as_bool(),
+            public: policy
+                .get_FirewallEnabled(NET_FW_PROFILE2_PUBLIC)?
+                .as_bool(),
         })
     }
 }
@@ -182,7 +190,15 @@ fn windows_version() -> Option<String> {
         let mut buffer = [0u16; 64];
         let mut size = std::mem::size_of_val(&buffer) as u32;
         unsafe {
-            RegGetValueW(HKEY_LOCAL_MACHINE, KEY, name, RRF_RT_REG_SZ, None, Some(buffer.as_mut_ptr().cast()), Some(&mut size))
+            RegGetValueW(
+                HKEY_LOCAL_MACHINE,
+                KEY,
+                name,
+                RRF_RT_REG_SZ,
+                None,
+                Some(buffer.as_mut_ptr().cast()),
+                Some(&mut size),
+            )
         }
         .ok()
         .ok()?;
@@ -194,7 +210,15 @@ fn windows_version() -> Option<String> {
         let mut value = 0u32;
         let mut size = std::mem::size_of::<u32>() as u32;
         unsafe {
-            RegGetValueW(HKEY_LOCAL_MACHINE, KEY, name, RRF_RT_REG_DWORD, None, Some((&mut value as *mut u32).cast()), Some(&mut size))
+            RegGetValueW(
+                HKEY_LOCAL_MACHINE,
+                KEY,
+                name,
+                RRF_RT_REG_DWORD,
+                None,
+                Some((&mut value as *mut u32).cast()),
+                Some(&mut size),
+            )
         }
         .ok()
         .ok()?;
@@ -202,9 +226,17 @@ fn windows_version() -> Option<String> {
     }
 
     let build: u32 = text(w!("CurrentBuild"))?.parse().ok()?;
-    let name = if build >= 22000 { "Windows 11" } else { "Windows 10" };
-    let release = text(w!("DisplayVersion")).map(|version| format!(" {version}")).unwrap_or_default();
-    let revision = number(w!("UBR")).map(|ubr| format!(".{ubr}")).unwrap_or_default();
+    let name = if build >= 22000 {
+        "Windows 11"
+    } else {
+        "Windows 10"
+    };
+    let release = text(w!("DisplayVersion"))
+        .map(|version| format!(" {version}"))
+        .unwrap_or_default();
+    let revision = number(w!("UBR"))
+        .map(|ubr| format!(".{ubr}"))
+        .unwrap_or_default();
     Some(format!("{name}{release} · build {build}{revision}"))
 }
 
@@ -223,7 +255,10 @@ fn days_since(date: &VARIANT) -> Option<f64> {
         return None;
     }
 
-    let seconds = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs_f64();
+    let seconds = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()?
+        .as_secs_f64();
     let now = seconds / SECONDS_PER_DAY + DAYS_FROM_1899_TO_1970;
     Some((now - then).max(0.0))
 }

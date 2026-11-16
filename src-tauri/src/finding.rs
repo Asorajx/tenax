@@ -37,6 +37,9 @@ pub struct Step {
     // What came back, or the error if it failed.
     pub result: String,
     pub ms: f64,
+    // Text to hide when the log is copied, such as the hash prefix that was sent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redact: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

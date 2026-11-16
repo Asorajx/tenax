@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "./app/theme";
 import { ALL_TOOLS, TOOL_GROUPS } from "./app/tools";
 import Sidebar from "./components/Sidebar";
+import BreachedPasswords from "./pages/BreachedPasswords";
 import Home from "./pages/Home";
 import PasswordStrength from "./pages/PasswordStrength";
 import PlannedTool from "./pages/PlannedTool";
@@ -19,6 +20,14 @@ export default function App() {
   /* The current page is plain state, so no router is needed. */
   const [page, setPage] = useState("home");
   const [theme, setTheme] = useTheme();
+
+  /* A password sent from one tool to another. It is cleared as soon as the other tool has it. */
+  const [handoff, setHandoff] = useState<{ password: string } | null>(null);
+  const clearHandoff = useCallback(() => setHandoff(null), []);
+  function checkStrength(password: string) {
+    setHandoff({ password });
+    setPage("password-strength");
+  }
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -57,7 +66,8 @@ export default function App() {
 
     if (id === "home") return <Home onNavigate={setPage} />;
     if (id === "settings") return <Settings theme={theme} onThemeChange={setTheme} />;
-    if (tool?.id === "password-strength") return <PasswordStrength tool={tool} />;
+    if (tool?.id === "password-breach") return <BreachedPasswords tool={tool} onCheckStrength={checkStrength} />;
+    if (tool?.id === "password-strength") return <PasswordStrength tool={tool} handoff={handoff} onHandoffUsed={clearHandoff} />;
     if (tool?.id === "windows-security") return <WindowsSecurity tool={tool} />;
     return tool && <PlannedTool tool={tool} />;
   }

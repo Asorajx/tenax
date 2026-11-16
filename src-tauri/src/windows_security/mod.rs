@@ -70,7 +70,7 @@ pub async fn check_windows_security() -> Result<Vec<Finding>, String> {
         findings
     })
     .await
-        .map_err(|error| error.to_string())
+    .map_err(|error| error.to_string())
 }
 
 #[cfg(not(windows))]

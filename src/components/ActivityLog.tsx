@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import { Check, ChevronDown, Copy, SquareTerminal } from "lucide-react";
-import type { Finding } from "./Finding";
+import type { Finding, Step } from "./Finding";
 
 /* =========================
    Activity Log
@@ -36,13 +36,19 @@ function formatMs(ms: number) {
   return ms < 1 ? "<1 ms" : `${Math.round(ms)} ms`;
 }
 
-/* The plain-text version of the log, for troubleshooting or sharing. */
+/* The plain-text version of the log, for troubleshooting or sharing. Anything a step marks as */
+/* redacted, such as the hash prefix that was sent, is hidden, since the log may be shared. */
 function buildLog(title: string, findings: Finding[], seconds: number) {
-  const lines = [`Tenax technical log: ${title}`, `Total time: ${formatSeconds(seconds)}`, ""];
-  for (const step of findings.flatMap((finding) => finding.steps ?? [])) {
-    lines.push(`[${step.ok ? "ok" : "failed"}] ${step.action} (${formatMs(step.ms)})`);
-    lines.push(`    Method: ${step.method}`);
-    lines.push(`    Result: ${step.result}`);
+  const steps = findings.flatMap((finding) => finding.steps ?? []);
+  const hide = (text: string, step: Step) => (step.redact ? text.split(step.redact).join("[hidden]") : text);
+
+  const lines = [`Tenax technical log: ${title}`, `Total time: ${formatSeconds(seconds)}`];
+  if (steps.some((step) => step.redact)) lines.push("Some values are hidden in this copy.");
+  lines.push("");
+  for (const step of steps) {
+    lines.push(`[${step.ok ? "ok" : "failed"}] ${hide(step.action, step)} (${formatMs(step.ms)})`);
+    lines.push(`    Method: ${hide(step.method, step)}`);
+    lines.push(`    Result: ${hide(step.result, step)}`);
   }
   return lines.join("\n");
 }

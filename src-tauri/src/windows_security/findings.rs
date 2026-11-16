@@ -3,7 +3,7 @@
 // There is no Windows code here, so every case can be tested with made-up readings.
 
 use super::{FirewallProfiles, ProductState, Readings, SecurityProduct, UpdateStatus};
-use crate::finding::{detail, switch, Detail, Finding, Status};
+use crate::finding::{Detail, Finding, Status, detail, switch};
 
 // A longer gap than this since the last update check is reported.
 const STALE_CHECK_DAYS: f64 = 7.0;
@@ -103,8 +103,9 @@ fn names_where<'a>(
         .collect()
 }
 
-
+// =========================
 // Antivirus
+// =========================
 
 fn antivirus(reading: &Result<Vec<SecurityProduct>, String>) -> Finding {
     let products: Vec<&SecurityProduct> = match reading {
@@ -113,7 +114,7 @@ fn antivirus(reading: &Result<Vec<SecurityProduct>, String>) -> Finding {
             return ANTIVIRUS.could_not_check(
                 "Open Windows Security and look under Virus & threat protection.",
                 error,
-            )
+            );
         }
     };
 
@@ -198,8 +199,9 @@ fn antivirus(reading: &Result<Vec<SecurityProduct>, String>) -> Finding {
     ANTIVIRUS.finding(Status::Ok, "Active", None, details)
 }
 
-
+// =========================
 // Firewall
+// =========================
 
 fn firewall(
     reading: &Result<FirewallProfiles, String>,
@@ -211,14 +213,18 @@ fn firewall(
             return FIREWALL.could_not_check(
                 "Open Windows Security and look under Firewall & network protection.",
                 error,
-            )
+            );
         }
     };
 
     let on_off = |enabled: bool| if enabled { "On" } else { "Off" };
     let mut details = vec![
         switch("Domain networks", on_off(profiles.domain), profiles.domain),
-        switch("Private networks", on_off(profiles.private), profiles.private),
+        switch(
+            "Private networks",
+            on_off(profiles.private),
+            profiles.private,
+        ),
         switch("Public networks", on_off(profiles.public), profiles.public),
     ];
 
@@ -290,15 +296,20 @@ fn firewall(
 
     FIREWALL.finding(
         // Every profile off is more serious than one.
-        if off.len() == 3 { Status::Risk } else { Status::Warning },
+        if off.len() == 3 {
+            Status::Risk
+        } else {
+            Status::Warning
+        },
         summary,
         Some(action),
         details,
     )
 }
 
-
+// =========================
 // Windows Update
+// =========================
 
 fn days_ago(days: Option<f64>) -> String {
     match days {
@@ -313,7 +324,7 @@ fn updates(reading: &Result<UpdateStatus, String>) -> Finding {
     let status = match reading {
         Ok(status) => status,
         Err(error) => {
-            return UPDATES.could_not_check("Open Settings and look under Windows Update.", error)
+            return UPDATES.could_not_check("Open Settings and look under Windows Update.", error);
         }
     };
 
@@ -324,15 +335,21 @@ fn updates(reading: &Result<UpdateStatus, String>) -> Finding {
     details.extend([
         detail("Last check", days_ago(status.days_since_check)),
         detail("Last install", days_ago(status.days_since_install)),
-        detail("Restart", if status.restart_pending { "Needed" } else { "Not needed" }),
+        detail(
+            "Restart",
+            if status.restart_pending {
+                "Needed"
+            } else {
+                "Not needed"
+            },
+        ),
     ]);
     if !status.service_enabled {
         details.push(detail("Update components", "Not available"));
     }
 
-    let check_now = Some(
-        "Open Settings, choose Windows Update, and select Check for updates.".to_string(),
-    );
+    let check_now =
+        Some("Open Settings, choose Windows Update, and select Check for updates.".to_string());
 
     if !status.service_enabled {
         return UPDATES.finding(
@@ -352,7 +369,12 @@ fn updates(reading: &Result<UpdateStatus, String>) -> Finding {
     }
 
     match status.days_since_check {
-        None => UPDATES.finding(Status::Info, "No update check on record", check_now, details),
+        None => UPDATES.finding(
+            Status::Info,
+            "No update check on record",
+            check_now,
+            details,
+        ),
         Some(days) if days > STALE_CHECK_DAYS => UPDATES.finding(
             Status::Warning,
             format!("Last checked {}", days_ago(Some(days)).to_lowercase()),
@@ -368,8 +390,9 @@ fn updates(reading: &Result<UpdateStatus, String>) -> Finding {
     }
 }
 
-
+// =========================
 // Tests
+// =========================
 
 #[cfg(test)]
 mod tests {
@@ -386,7 +409,11 @@ mod tests {
     fn healthy() -> Readings {
         Readings {
             antivirus: Ok(vec![product("Windows Defender", ProductState::On)]),
-            firewall: Ok(FirewallProfiles { domain: true, private: true, public: true }),
+            firewall: Ok(FirewallProfiles {
+                domain: true,
+                private: true,
+                public: true,
+            }),
             other_firewalls: Ok(vec![]),
             updates: Ok(UpdateStatus {
                 service_enabled: true,
@@ -399,11 +426,19 @@ mod tests {
     }
 
     fn all_off() -> Result<FirewallProfiles, String> {
-        Ok(FirewallProfiles { domain: false, private: false, public: false })
+        Ok(FirewallProfiles {
+            domain: false,
+            private: false,
+            public: false,
+        })
     }
 
     fn status_of(findings: &[Finding], id: &str) -> Status {
-        findings.iter().find(|finding| finding.id == id).unwrap().status
+        findings
+            .iter()
+            .find(|finding| finding.id == id)
+            .unwrap()
+            .status
     }
 
     #[test]
@@ -439,7 +474,10 @@ mod tests {
             .collect();
         assert_eq!(
             listed,
-            vec![("Windows Defender", Some(true)), ("Norton 360", Some(false))]
+            vec![
+                ("Windows Defender", Some(true)),
+                ("Norton 360", Some(false))
+            ]
         );
     }
 
@@ -467,7 +505,10 @@ mod tests {
         };
 
         // Another active product is current, so the PC is still covered.
-        let finding = antivirus(&Ok(vec![outdated(), product("Norton 360", ProductState::On)]));
+        let finding = antivirus(&Ok(vec![
+            outdated(),
+            product("Norton 360", ProductState::On),
+        ]));
         assert_eq!(finding.status, Status::Ok);
         assert_eq!(finding.summary, "Active");
 
@@ -478,7 +519,11 @@ mod tests {
     fn firewall_off_is_reported_by_profile() {
         let none = Ok(vec![]);
         let public_off = firewall(
-            &Ok(FirewallProfiles { domain: true, private: true, public: false }),
+            &Ok(FirewallProfiles {
+                domain: true,
+                private: true,
+                public: false,
+            }),
             &none,
         );
         assert_eq!(public_off.status, Status::Warning);
@@ -498,14 +543,27 @@ mod tests {
         ]);
         let finding = firewall(&all_off(), &suite_on);
         assert_eq!(finding.status, Status::Info);
-        assert_eq!(finding.summary, "Windows Firewall off · Norton 360 firewall on");
-        assert!(finding.action.unwrap().contains("Open Norton 360 and confirm"));
+        assert_eq!(
+            finding.summary,
+            "Windows Firewall off · Norton 360 firewall on"
+        );
+        assert!(
+            finding
+                .action
+                .unwrap()
+                .contains("Open Norton 360 and confirm")
+        );
 
         // The suite is installed but its firewall is not active: still a real problem.
         let suite_off = Ok(vec![product("Norton 360", ProductState::Off)]);
         let finding = firewall(&all_off(), &suite_off);
         assert_eq!(finding.status, Status::Risk);
-        assert!(finding.details.iter().any(|item| item.value == "Not active"));
+        assert!(
+            finding
+                .details
+                .iter()
+                .any(|item| item.value == "Not active")
+        );
 
         // The list could not be read: say so, and do not assume a suite is covering.
         let unreadable = Err("Access is denied.".to_string());
@@ -524,18 +582,30 @@ mod tests {
             windows_version: None,
         };
 
-        let stale = UpdateStatus { days_since_check: Some(9.4), ..base() };
+        let stale = UpdateStatus {
+            days_since_check: Some(9.4),
+            ..base()
+        };
         let finding = updates(&Ok(stale));
         assert_eq!(finding.status, Status::Warning);
         assert_eq!(finding.summary, "Last checked 9 days ago");
 
-        let restart = UpdateStatus { restart_pending: true, ..base() };
+        let restart = UpdateStatus {
+            restart_pending: true,
+            ..base()
+        };
         assert_eq!(updates(&Ok(restart)).status, Status::Warning);
 
-        let unavailable = UpdateStatus { service_enabled: false, ..base() };
+        let unavailable = UpdateStatus {
+            service_enabled: false,
+            ..base()
+        };
         assert_eq!(updates(&Ok(unavailable)).status, Status::Warning);
 
-        let never = UpdateStatus { days_since_check: None, ..base() };
+        let never = UpdateStatus {
+            days_since_check: None,
+            ..base()
+        };
         assert_eq!(updates(&Ok(never)).status, Status::Info);
     }
 
@@ -548,7 +618,11 @@ mod tests {
             updates: Err("Access is denied.".to_string()),
         };
         let findings = build(&readings);
-        assert!(findings.iter().all(|finding| finding.status == Status::Unknown));
+        assert!(
+            findings
+                .iter()
+                .all(|finding| finding.status == Status::Unknown)
+        );
     }
 
     #[test]
@@ -565,7 +639,11 @@ mod tests {
     fn most_serious_finding_comes_first() {
         let mut readings = healthy();
         readings.antivirus = Ok(vec![]);
-        readings.firewall = Ok(FirewallProfiles { domain: true, private: true, public: false });
+        readings.firewall = Ok(FirewallProfiles {
+            domain: true,
+            private: true,
+            public: false,
+        });
         let findings = build(&readings);
         let order: Vec<Status> = findings.iter().map(|finding| finding.status).collect();
         assert_eq!(order, vec![Status::Risk, Status::Warning, Status::Ok]);
@@ -577,7 +655,10 @@ mod tests {
     #[ignore]
     fn print_real_findings() {
         for finding in build(&super::super::reader::read().0) {
-            println!("{:?} | {} | {}", finding.status, finding.title, finding.summary);
+            println!(
+                "{:?} | {} | {}",
+                finding.status, finding.title, finding.summary
+            );
             for item in &finding.details {
                 println!("    {}: {}", item.label, item.value);
             }

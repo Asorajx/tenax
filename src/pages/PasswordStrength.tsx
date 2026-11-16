@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Tool } from "../app/tools";
-import { analyse, loadAnalyser, MAX_LENGTH, type Analyser } from "../app/passwordAnalysis";
+import { analyse, loadAnalyser, type Analyser } from "../app/passwordAnalysis";
 import ActivityLog from "../components/ActivityLog";
 import FindingCard from "../components/Finding";
+import PasswordField from "../components/PasswordField";
 import ToolPage from "../components/ToolPage";
 
 /* =========================
@@ -16,11 +17,24 @@ const VERDICTS = {
   ok: "No obvious weaknesses found.",
 } as const;
 
-export default function PasswordStrength({ tool }: { tool: Tool }) {
+interface PasswordStrengthProps {
+  tool: Tool;
+  /* A password sent from another tool. It is entered once, then cleared from the app. */
+  handoff: { password: string } | null;
+  onHandoffUsed: () => void;
+}
+
+export default function PasswordStrength({ tool, handoff, onHandoffUsed }: PasswordStrengthProps) {
   const [password, setPassword] = useState("");
-  const [visible, setVisible] = useState(false);
   const [analyser, setAnalyser] = useState<Analyser | null>(null);
   const [failed, setFailed] = useState(false);
+
+  /* A password sent from another tool is entered here. */
+  useEffect(() => {
+    if (!handoff) return;
+    setPassword(handoff.password);
+    onHandoffUsed();
+  }, [handoff, onHandoffUsed]);
 
   /* The word lists load once, the first time this page opens. */
   useEffect(() => {
@@ -36,43 +50,9 @@ export default function PasswordStrength({ tool }: { tool: Tool }) {
   const status = findings[0]?.status;
   const verdict = status === "risk" || status === "warning" || status === "ok" ? VERDICTS[status] : "";
 
-  function clear() {
-    setPassword("");
-    setVisible(false);
-  }
-
   return (
     <ToolPage tool={tool} info={<p>{tool.privacy}</p>}>
-      <div className="field">
-        <input
-          type={visible ? "text" : "password"}
-          value={password}
-          maxLength={MAX_LENGTH}
-          placeholder="Type or paste a password"
-          aria-label="Password to check"
-          autoComplete="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={visible ? "Hide password" : "Show password"}
-          aria-pressed={visible}
-          onClick={() => setVisible(!visible)}
-        >
-          {/* Windows' own icons: View (eye) and Hide (eye with a slash). The key replays the pop. */}
-          <span key={String(visible)} className="reveal-glyph" aria-hidden="true">
-            {visible ? "\uED1A" : "\uE890"}
-          </span>
-        </button>
-        {password && (
-          <button type="button" className="button" onClick={clear}>
-            Clear
-          </button>
-        )}
-      </div>
+      <PasswordField value={password} onChange={setPassword} />
 
       {failed && (
         <div className="notice" data-tone="error" role="alert">

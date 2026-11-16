@@ -486,6 +486,21 @@ button.row:hover {
   background: var(--surface-raised);
 }
 
+.inline-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.inline-link:hover {
+  color: var(--accent-hover);
+}
+
 .finding-action strong {
   color: var(--status-colour);
   font-size: var(--text-sm);

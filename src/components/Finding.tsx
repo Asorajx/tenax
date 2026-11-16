@@ -23,6 +23,8 @@ export interface Step {
   ok: boolean;
   result: string;
   ms: number;
+  /* Text hidden when the log is copied, such as the hash prefix that was sent. */
+  redact?: string;
 }
 
 export interface Finding {
@@ -47,8 +49,29 @@ const STATUSES: Record<FindingStatus, { label: string; icon: LucideIcon }> = {
   unknown: { label: "Could not check", icon: CircleHelp },
 };
 
+/* The action text, with the link phrase turned into a button when the text contains it. */
+function withLink(action: string, link?: FindingLink) {
+  const index = link ? action.indexOf(link.text) : -1;
+  if (!link || index === -1) return action;
+  return (
+    <>
+      {action.slice(0, index)}
+      <button type="button" className="inline-link" onClick={link.onClick}>
+        {link.text}
+      </button>
+      {action.slice(index + link.text.length)}
+    </>
+  );
+}
+
 /* One card per check. It shows the state, what is on and off, and what to do if anything. */
-export default function FindingCard({ finding }: { finding: Finding }) {
+/* A phrase inside the "What to do" text that can be clicked, such as the name of another tool. */
+export interface FindingLink {
+  text: string;
+  onClick: () => void;
+}
+
+export default function FindingCard({ finding, link }: { finding: Finding; link?: FindingLink }) {
   const status = STATUSES[finding.status];
 
   return (
@@ -74,7 +97,7 @@ export default function FindingCard({ finding }: { finding: Finding }) {
       {finding.action && (
         <p className="finding-action">
           <strong>What to do</strong>
-          {finding.action}
+          <span>{withLink(finding.action, link)}</span>
         </p>
       )}
     </article>

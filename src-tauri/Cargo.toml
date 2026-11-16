@@ -22,6 +22,10 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# The web request for Breached Passwords. native-tls uses Windows' own secure connection (Schannel).
+reqwest = { version = "0.13", default-features = false, features = ["native-tls"] }
+# Hashes the password on this PC before anything is sent.
+sha1 = "0.11"
 
 # Microsoft's Windows API bindings. Tauri already includes this crate.
 [target.'cfg(windows)'.dependencies]
