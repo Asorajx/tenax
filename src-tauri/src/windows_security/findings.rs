@@ -70,6 +70,7 @@ impl Check {
             action,
             details,
             steps: Vec::new(),
+            note: None,
         }
     }
 

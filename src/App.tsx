@@ -3,6 +3,7 @@ import { useTheme } from "./app/theme";
 import { ALL_TOOLS, TOOL_GROUPS } from "./app/tools";
 import Sidebar from "./components/Sidebar";
 import BreachedPasswords from "./pages/BreachedPasswords";
+import EmailHeaders from "./pages/EmailHeaders";
 import Home from "./pages/Home";
 import PasswordStrength from "./pages/PasswordStrength";
 import PlannedTool from "./pages/PlannedTool";
@@ -66,6 +67,7 @@ export default function App() {
 
     if (id === "home") return <Home onNavigate={setPage} />;
     if (id === "settings") return <Settings theme={theme} onThemeChange={setTheme} />;
+    if (tool?.id === "email-headers") return <EmailHeaders tool={tool} />;
     if (tool?.id === "password-breach") return <BreachedPasswords tool={tool} onCheckStrength={checkStrength} />;
     if (tool?.id === "password-strength") return <PasswordStrength tool={tool} handoff={handoff} onHandoffUsed={clearHandoff} />;
     if (tool?.id === "windows-security") return <WindowsSecurity tool={tool} />;

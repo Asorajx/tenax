@@ -36,6 +36,8 @@ export interface Finding {
   why: string;
   action?: string;
   details?: FindingDetail[];
+  /* A short explanation under the details, such as what a result does and does not mean. */
+  note?: string;
   /* Left out by simulated results, which did not run anything. */
   steps?: Step[];
 }
@@ -93,6 +95,8 @@ export default function FindingCard({ finding, link }: { finding: Finding; link?
           ))}
         </ul>
       )}
+
+      {finding.note && <p className="finding-note">{finding.note}</p>}
 
       {finding.action && (
         <p className="finding-action">

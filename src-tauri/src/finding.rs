@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use serde::Serialize;
 
 // The result shape every tool returns. It must match the Finding type in
@@ -42,6 +44,21 @@ pub struct Step {
     pub redact: Option<String>,
 }
 
+impl Step {
+    // A step that worked, timed from when it started. The step ends when this is called.
+    pub fn new(action: &str, plain: &str, method: &str, result: String, started: Instant) -> Step {
+        Step {
+            action: action.to_string(),
+            plain: plain.to_string(),
+            method: method.to_string(),
+            ok: true,
+            result,
+            ms: started.elapsed().as_secs_f64() * 1000.0,
+            redact: None,
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct Finding {
     pub id: String,
@@ -58,6 +75,9 @@ pub struct Finding {
     pub action: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub details: Vec<Detail>,
+    // A short explanation shown under the details, such as what a result does and does not mean.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
     // What Tenax did to get this result. Filled in after the readings, not by findings.rs.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub steps: Vec<Step>,

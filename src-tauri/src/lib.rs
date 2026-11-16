@@ -1,4 +1,5 @@
 mod breached_passwords;
+mod email_headers;
 mod finding;
 mod windows_security;
 
@@ -9,6 +10,7 @@ pub fn run() {
         // Every command the interface is allowed to call is listed here.
         .invoke_handler(tauri::generate_handler![
             breached_passwords::check_breached_password,
+            email_headers::analyse_email_headers,
             windows_security::check_windows_security
         ])
         .run(tauri::generate_context!())

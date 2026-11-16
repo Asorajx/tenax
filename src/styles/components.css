@@ -137,7 +137,8 @@
   gap: var(--space-2);
 }
 
-.field input {
+.field input,
+.text-area {
   flex: 1;
   min-width: 0;
   padding: 8px var(--space-3);
@@ -150,7 +151,8 @@
   transition: border-color var(--transition);
 }
 
-.field input:focus-visible {
+.field input:focus-visible,
+.text-area:focus-visible {
   border-color: var(--accent);
   outline: 0;
 }
@@ -190,7 +192,29 @@
   }
 }
 
-.field input::placeholder {
+.text-area {
+  width: 100%;
+  min-height: 180px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* The compact line that replaces the pasted text once it has been analysed. */
+.input-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.field input::placeholder,
+.text-area::placeholder {
   color: var(--text-faint);
   font-family: var(--font-sans);
 }
@@ -443,15 +467,21 @@ button.row:hover {
 
 .finding-items li {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-columns: 18px auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3);
   padding: 6px 0;
   border-top: 1px solid var(--border);
 }
 
+.finding-items li > span:nth-child(2) {
+  white-space: nowrap;
+}
+
+/* A long value, such as a full address, wraps instead of running over the label. */
 .finding-value {
   color: var(--text-muted);
+  overflow-wrap: anywhere;
   text-align: right;
 }
 
@@ -474,6 +504,12 @@ button.row:hover {
   from {
     transform: scale(0);
   }
+}
+
+.finding-note {
+  margin: 0 var(--space-4) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
 }
 
 .finding-action {

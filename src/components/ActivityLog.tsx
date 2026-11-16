@@ -42,11 +42,16 @@ function buildLog(title: string, findings: Finding[], seconds: number) {
   const steps = findings.flatMap((finding) => finding.steps ?? []);
   const hide = (text: string, step: Step) => (step.redact ? text.split(step.redact).join("[hidden]") : text);
 
-  const lines = [`Tenax technical log: ${title}`, `Total time: ${formatSeconds(seconds)}`];
+  const lines = [
+    `Tenax technical log: ${title}`,
+    `Total time: ${formatSeconds(seconds)}`,
+    /* The status says whether a step ran, not whether what it found is safe. */
+    "[completed] means a step ran, not that its findings are safe.",
+  ];
   if (steps.some((step) => step.redact)) lines.push("Some values are hidden in this copy.");
   lines.push("");
   for (const step of steps) {
-    lines.push(`[${step.ok ? "ok" : "failed"}] ${hide(step.action, step)} (${formatMs(step.ms)})`);
+    lines.push(`[${step.ok ? "completed" : "failed"}] ${hide(step.action, step)} (${formatMs(step.ms)})`);
     lines.push(`    Method: ${hide(step.method, step)}`);
     lines.push(`    Result: ${hide(step.result, step)}`);
   }
