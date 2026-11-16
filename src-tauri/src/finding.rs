@@ -13,6 +13,8 @@ pub enum Status {
     Warning,
     // The check itself failed, so nothing can be said either way.
     Unknown,
+    // The check ran, but information it needed was missing, so it cannot say either way.
+    Limited,
     Info,
     Ok,
 }
@@ -24,6 +26,18 @@ pub struct Detail {
     // Whether this item is switched on. Left out for items that are not on or off.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active: Option<bool>,
+    // Why this item matters. The interface keeps these folded away until they are asked for.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+// A web address a check found, with a short assessment of it. Any tool can list these, and
+// the interface shows them as plain text that cannot be clicked.
+#[derive(Debug, Clone, Serialize)]
+pub struct UrlItem {
+    pub url: String,
+    pub status: Status,
+    pub assessment: String,
 }
 
 // One thing Tenax actually did while running a check, recorded as it ran.
@@ -78,6 +92,9 @@ pub struct Finding {
     // A short explanation shown under the details, such as what a result does and does not mean.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    // Web addresses the check found, each with its own assessment.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub urls: Vec<UrlItem>,
     // What Tenax did to get this result. Filled in after the readings, not by findings.rs.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub steps: Vec<Step>,
@@ -88,6 +105,16 @@ pub fn detail(label: &str, value: impl Into<String>) -> Detail {
         label: label.to_string(),
         value: value.into(),
         active: None,
+        reason: None,
+    }
+}
+
+impl Detail {
+    pub fn because(self, reason: impl Into<String>) -> Detail {
+        Detail {
+            reason: Some(reason.into()),
+            ..self
+        }
     }
 }
 
@@ -96,5 +123,14 @@ pub fn switch(label: &str, value: impl Into<String>, active: bool) -> Detail {
     Detail {
         active: Some(active),
         ..detail(label, value)
+    }
+}
+
+// A count with its noun in the right form, such as "1 server" or "2 servers".
+pub fn count_of(count: usize, noun: &str) -> String {
+    if count == 1 {
+        format!("{count} {noun}")
+    } else {
+        format!("{count} {noun}s")
     }
 }

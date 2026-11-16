@@ -5,11 +5,12 @@
 // findings.rs turns those into findings, with no Windows or network code in it
 
 mod findings;
-mod parser;
+// Shared with the Email Scam Checker, which reads the same kind of header block.
+pub(crate) mod parser;
 
 use std::time::Instant;
 
-use crate::finding::{Finding, Step};
+use crate::finding::{Finding, Step, count_of};
 
 // More than this is not a set of headers, so it is refused rather than slowing the app down.
 const MAX_LENGTH: usize = 1_000_000;
@@ -34,7 +35,7 @@ pub fn analyse_email_headers(raw: String) -> Result<Vec<Finding>, String> {
         "Read the pasted headers",
         "Split the pasted text into the email's header fields",
         "Header fields split by line, with folded lines joined, stopping at the first blank line",
-        format!("{} read", findings::count_of(headers.len(), "header field")),
+        format!("{} read", count_of(headers.len(), "header field")),
         started,
     );
 

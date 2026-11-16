@@ -26,6 +26,10 @@ serde_json = "1"
 reqwest = { version = "0.13", default-features = false, features = ["native-tls"] }
 # Hashes the password on this PC before anything is sent.
 sha1 = "0.11"
+url = "2.5.8"
+psl = "2.1.255"
+idna = "1.1.0"
+scraper = "0.29.0"
 
 # Microsoft's Windows API bindings. Tauri already includes this crate.
 [target.'cfg(windows)'.dependencies]

@@ -20,7 +20,7 @@ const VERDICTS = {
 interface PasswordStrengthProps {
   tool: Tool;
   /* A password sent from another tool. It is entered once, then cleared from the app. */
-  handoff: { password: string } | null;
+  handoff: { value: string } | null;
   onHandoffUsed: () => void;
 }
 
@@ -32,7 +32,7 @@ export default function PasswordStrength({ tool, handoff, onHandoffUsed }: Passw
   /* A password sent from another tool is entered here. */
   useEffect(() => {
     if (!handoff) return;
-    setPassword(handoff.password);
+    setPassword(handoff.value);
     onHandoffUsed();
   }, [handoff, onHandoffUsed]);
 

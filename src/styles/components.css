@@ -389,6 +389,16 @@ button.row:hover {
   color: var(--status-risk);
 }
 
+/* A limited analysis is neither reassuring nor alarming, so it is neutral. */
+.verdict[data-status="limited"] {
+  color: var(--text);
+}
+
+.verdict-detail {
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+}
+
 .findings {
   display: flex;
   flex-direction: column;
@@ -406,6 +416,7 @@ button.row:hover {
 }
 
 .finding[data-status="info"],
+.finding[data-status="limited"],
 .finding[data-status="unknown"] {
   --status-colour: var(--status-info);
 }
@@ -506,6 +517,108 @@ button.row:hover {
   }
 }
 
+.finding-urls {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-2);
+  list-style: none;
+}
+
+.finding-urls li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--border);
+}
+
+.finding-urls li[data-status="ok"] {
+  --status-colour: var(--status-ok);
+}
+
+.finding-urls li[data-status="info"],
+.finding-urls li[data-status="limited"],
+.finding-urls li[data-status="unknown"] {
+  --status-colour: var(--status-info);
+}
+
+.finding-urls li[data-status="warning"] {
+  --status-colour: var(--status-warning);
+}
+
+.finding-urls li[data-status="risk"] {
+  --status-colour: var(--status-risk);
+}
+
+.finding-urls .finding-icon {
+  margin-top: 2px;
+}
+
+.finding-url-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.finding-url-text code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.finding-url-text span {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.finding-url-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.button-small {
+  padding: 2px var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.finding-why {
+  margin: 0 var(--space-4) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.finding-why summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.finding-why summary:hover {
+  color: var(--text);
+}
+
+.finding-why summary:focus-visible {
+  outline-offset: 2px;
+}
+
+.finding-why ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.finding-why strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
 .finding-note {
   margin: 0 var(--space-4) var(--space-3);
   color: var(--text-muted);
@@ -541,6 +654,46 @@ button.row:hover {
   color: var(--status-colour);
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+
+/* The smallest window leaves about 500px for the content, so rows stack their value under the label. */
+@media (max-width: 820px) {
+  .finding-header {
+    flex-wrap: wrap;
+  }
+
+  .finding-state {
+    margin-left: 0;
+    text-align: left;
+  }
+
+  .finding-items li {
+    grid-template-columns: 18px minmax(0, 1fr);
+    row-gap: 2px;
+  }
+
+  .finding-items li > .finding-value {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .finding-items li > span:nth-child(2) {
+    white-space: normal;
+  }
+
+  .finding-urls li {
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .finding-url-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .field {
+    flex-wrap: wrap;
+  }
 }
 
 

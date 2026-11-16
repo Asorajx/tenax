@@ -1,5 +1,6 @@
 mod breached_passwords;
 mod email_headers;
+mod email_scam;
 mod finding;
 mod windows_security;
 
@@ -11,6 +12,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             breached_passwords::check_breached_password,
             email_headers::analyse_email_headers,
+            email_scam::check_email_scam,
             windows_security::check_windows_security
         ])
         .run(tauri::generate_context!())

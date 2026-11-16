@@ -7,19 +7,10 @@ use super::parser::{
     AuthResult, Headers, address_in_name, authentication_results, authserv_id, domain_of,
     parse_hop, parse_mailbox, received_spf, related_hosts, same_domain,
 };
-use crate::finding::{Detail, Finding, Status, Step, detail, switch};
+use crate::finding::{Detail, Finding, Status, Step, count_of, detail, switch};
 
 // How many servers of the delivery path are listed before the rest are summarised.
 const MAX_HOPS_SHOWN: usize = 10;
-
-// A count with its noun in the right form, such as "1 server" or "2 servers".
-pub fn count_of(count: usize, noun: &str) -> String {
-    if count == 1 {
-        format!("{count} {noun}")
-    } else {
-        format!("{count} {noun}s")
-    }
-}
 
 // What each check reads and why. These stay the same whatever the result is.
 struct Check {
@@ -73,6 +64,7 @@ impl Check {
             action: action.map(str::to_string),
             details,
             steps: vec![step],
+            urls: Vec::new(),
             note: None,
         }
     }

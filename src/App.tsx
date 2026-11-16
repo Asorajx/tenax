@@ -4,6 +4,7 @@ import { ALL_TOOLS, TOOL_GROUPS } from "./app/tools";
 import Sidebar from "./components/Sidebar";
 import BreachedPasswords from "./pages/BreachedPasswords";
 import EmailHeaders from "./pages/EmailHeaders";
+import EmailScam from "./pages/EmailScam";
 import Home from "./pages/Home";
 import PasswordStrength from "./pages/PasswordStrength";
 import PlannedTool from "./pages/PlannedTool";
@@ -22,13 +23,19 @@ export default function App() {
   const [page, setPage] = useState("home");
   const [theme, setTheme] = useTheme();
 
-  /* A password sent from one tool to another. It is cleared as soon as the other tool has it. */
-  const [handoff, setHandoff] = useState<{ password: string } | null>(null);
+  /* A value sent from one tool to another, such as a password or a link. It is kept in memory */
+  /* only, and cleared as soon as the other tool has it. */
+  const [handoff, setHandoff] = useState<{ tool: string; value: string } | null>(null);
   const clearHandoff = useCallback(() => setHandoff(null), []);
-  function checkStrength(password: string) {
-    setHandoff({ password });
-    setPage("password-strength");
+  function sendTo(tool: string, value: string) {
+    setHandoff({ tool, value });
+    setPage(tool);
   }
+
+  /* The Email Scam Checker can send a link to the URL Checker once that tool is built. Until */
+  /* then it is not offered, so there is no button that leads nowhere. */
+  const urlChecker = ALL_TOOLS.find((candidate) => candidate.id === "url-check");
+  const analyseUrl = urlChecker?.ready ? (url: string) => sendTo("url-check", url) : undefined;
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -67,9 +74,14 @@ export default function App() {
 
     if (id === "home") return <Home onNavigate={setPage} />;
     if (id === "settings") return <Settings theme={theme} onThemeChange={setTheme} />;
+    if (tool?.id === "email-scam") return <EmailScam tool={tool} onAnalyseUrl={analyseUrl} />;
     if (tool?.id === "email-headers") return <EmailHeaders tool={tool} />;
-    if (tool?.id === "password-breach") return <BreachedPasswords tool={tool} onCheckStrength={checkStrength} />;
-    if (tool?.id === "password-strength") return <PasswordStrength tool={tool} handoff={handoff} onHandoffUsed={clearHandoff} />;
+    if (tool?.id === "password-breach") return <BreachedPasswords tool={tool} onCheckStrength={(password) => sendTo("password-strength", password)} />;
+    if (tool?.id === "password-strength") return <PasswordStrength
+          tool={tool}
+          handoff={handoff?.tool === "password-strength" ? handoff : null}
+          onHandoffUsed={clearHandoff}
+        />;
     if (tool?.id === "windows-security") return <WindowsSecurity tool={tool} />;
     return tool && <PlannedTool tool={tool} />;
   }

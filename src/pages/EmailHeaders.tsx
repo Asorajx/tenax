@@ -3,14 +3,12 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Tool } from "../app/tools";
 import ActivityLog from "../components/ActivityLog";
 import FindingCard, { type Finding, type FindingStatus } from "../components/Finding";
+import PasteBox from "../components/PasteBox";
 import ToolPage from "../components/ToolPage";
 
 /* =========================
    Email Headers
    ========================= */
-
-/* The most that can be pasted. Headers are far shorter than this. */
-const MAX_LENGTH = 200000;
 
 /* What the verdict says for each result. It never claims an email is safe. */
 const VERDICTS: Partial<Record<FindingStatus, string>> = {
@@ -28,8 +26,6 @@ export default function EmailHeaders({ tool }: { tool: Tool }) {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState("");
-  /* After a successful analysis the pasted text is folded away until Edit is pressed. */
-  const [editing, setEditing] = useState(false);
 
   /* Results belong to the headers that were analysed, so changing them clears the results. */
   function changeHeaders(next: string) {
@@ -45,7 +41,6 @@ export default function EmailHeaders({ tool }: { tool: Tool }) {
     try {
       setFindings(await invoke<Finding[]>("analyse_email_headers", { raw: headers }));
       setSeconds((performance.now() - started) / 1000);
-      setEditing(false);
       setState("done");
     } catch (reason) {
       setError(String(reason));
@@ -60,48 +55,20 @@ export default function EmailHeaders({ tool }: { tool: Tool }) {
     (["risk", "warning", "unknown"] as const).find((concern) => checks.some((finding) => finding.status === concern)) ??
     findings.find((finding) => finding.id === "authentication")?.status;
 
-  const collapsed = state === "done" && !editing;
   const info = <p>{tool.privacy}</p>;
 
   return (
     <ToolPage tool={tool} info={info}>
-      {collapsed ? (
-        <div className="input-summary">
-          <span>Email headers provided · {headers.split("\n").length} lines</span>
-          <button type="button" className="button" onClick={() => setEditing(true)}>
-            Edit
-          </button>
-        </div>
-      ) : (
-        <>
-          <textarea
-            className="text-area"
-            value={headers}
-            maxLength={MAX_LENGTH}
-            placeholder="Paste the full email headers here"
-            aria-label="Email headers"
-            autoComplete="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            onChange={(event) => changeHeaders(event.target.value)}
-          />
-          <div className="field">
-            <button
-              type="button"
-              className="button button-primary"
-              disabled={!headers.trim() || state === "loading"}
-              onClick={runCheck}
-            >
-              {state === "loading" ? "Analysing…" : "Analyse"}
-            </button>
-            {headers && (
-              <button type="button" className="button" onClick={() => changeHeaders("")}>
-                Clear
-              </button>
-            )}
-          </div>
-        </>
-      )}
+      <PasteBox
+        value={headers}
+        onChange={changeHeaders}
+        placeholder="Paste the full email headers here"
+        ariaLabel="Email headers"
+        summaryLabel="Email headers provided"
+        loading={state === "loading"}
+        done={state === "done"}
+        onAnalyse={runCheck}
+      />
 
       {state === "error" && (
         <div className="notice" data-tone="error" role="alert">

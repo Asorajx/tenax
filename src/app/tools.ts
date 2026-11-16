@@ -94,8 +94,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
           "Mismatched sender names and link targets",
           "Why each indicator is used by scammers",
         ],
-        privacy: "Runs entirely on this device.",
-        ready: false,
+        privacy: "Runs entirely on this device. The email is never stored or sent.",
+        ready: true,
       },
       {
         id: "email-headers",

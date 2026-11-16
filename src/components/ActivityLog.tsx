@@ -13,6 +13,8 @@ interface ActivityLogProps {
   seconds: number;
   /* A closing line, such as what was not touched. */
   footer: string;
+  /* An overall result, put at the top of the copied log. */
+  result?: string;
 }
 
 /* The chosen tab is remembered for future scans. Basic is the default. */
@@ -38,13 +40,14 @@ function formatMs(ms: number) {
 
 /* The plain-text version of the log, for troubleshooting or sharing. Anything a step marks as */
 /* redacted, such as the hash prefix that was sent, is hidden, since the log may be shared. */
-function buildLog(title: string, findings: Finding[], seconds: number) {
+function buildLog(title: string, findings: Finding[], seconds: number, result?: string) {
   const steps = findings.flatMap((finding) => finding.steps ?? []);
   const hide = (text: string, step: Step) => (step.redact ? text.split(step.redact).join("[hidden]") : text);
 
   const lines = [
     `Tenax technical log: ${title}`,
     `Total time: ${formatSeconds(seconds)}`,
+    ...(result ? [`Overall: ${result}`] : []),
     /* The status says whether a step ran, not whether what it found is safe. */
     "[completed] means a step ran, not that its findings are safe.",
   ];
@@ -59,7 +62,7 @@ function buildLog(title: string, findings: Finding[], seconds: number) {
 }
 
 /* A collapsed terminal-style record of what Tenax did. Technical details open per step. */
-export default function ActivityLog({ title, findings, seconds, footer }: ActivityLogProps) {
+export default function ActivityLog({ title, findings, seconds, footer, result }: ActivityLogProps) {
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState<Tab>(savedTab);
   const hasSteps = findings.some((finding) => finding.steps?.length);
@@ -79,7 +82,7 @@ export default function ActivityLog({ title, findings, seconds, footer }: Activi
 
   async function copyLog() {
     try {
-      await navigator.clipboard.writeText(buildLog(title, findings, seconds));
+      await navigator.clipboard.writeText(buildLog(title, findings, seconds, result));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {

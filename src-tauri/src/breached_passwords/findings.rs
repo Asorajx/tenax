@@ -48,6 +48,7 @@ fn finding(
         action: action.map(str::to_string),
         details,
         steps: Vec::new(),
+        urls: Vec::new(),
         note: None,
     }
 }
