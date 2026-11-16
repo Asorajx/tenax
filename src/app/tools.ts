@@ -129,10 +129,14 @@ export const TOOL_GROUPS: ToolGroup[] = [
         id: "ip-info",
         label: "IP Information",
         icon: Network,
-        summary: "Look up ownership, location and reputation for an IP address.",
-        plan: ["Network owner and approximate location", "Reputation from an external service, if enabled"],
-        privacy: "Sends the IP address to a third-party lookup service.",
-        ready: false,
+        summary: "See what kind of address an IP address is, and optionally who runs it.",
+        plan: [
+          "Address type, worked out on this PC",
+          "Reverse DNS through this PC's DNS server, if you ask",
+          "Owner, network and approximate location from ipinfo.io, only if you confirm",
+        ],
+        privacy: "The address type is worked out on this PC. Reverse DNS sends the address to the DNS server this PC already uses. The owner and location lookup sends the address to ipinfo.io, an outside service, and only after you confirm it.",
+        ready: true,
       },
       {
         id: "tls-check",

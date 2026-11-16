@@ -13,6 +13,8 @@ pub enum Kind {
     Ns,
     Txt,
     Soa,
+    // The name an address points back to. Used by IP Information.
+    Ptr,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -25,6 +27,7 @@ pub enum Data {
     },
     Ns(String),
     Cname(String),
+    Ptr(String),
     // A text record can be sent in several pieces. They are joined into one string.
     Txt(String),
     Soa {

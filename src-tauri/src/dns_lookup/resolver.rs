@@ -41,6 +41,7 @@ const OPTIONS: DNS_QUERY_OPTIONS = DNS_QUERY_OPTIONS(
 const TYPE_A: u16 = 1;
 const TYPE_NS: u16 = 2;
 const TYPE_CNAME: u16 = 5;
+const TYPE_PTR: u16 = 12;
 const TYPE_SOA: u16 = 6;
 const TYPE_MX: u16 = 15;
 const TYPE_TXT: u16 = 16;
@@ -67,6 +68,7 @@ fn type_of(kind: Kind) -> u16 {
         Kind::Ns => TYPE_NS,
         Kind::Txt => TYPE_TXT,
         Kind::Soa => TYPE_SOA,
+        Kind::Ptr => TYPE_PTR,
     }
 }
 
@@ -125,6 +127,7 @@ unsafe fn record(record: &DNS_RECORDA) -> Option<Record> {
             },
             TYPE_NS => Data::Ns(text(record.Data.NS.pNameHost)),
             TYPE_CNAME => Data::Cname(text(record.Data.CNAME.pNameHost)),
+            TYPE_PTR => Data::Ptr(text(record.Data.PTR.pNameHost)),
             TYPE_SOA => Data::Soa {
                 primary: text(record.Data.SOA.pNamePrimaryServer),
                 admin: text(record.Data.SOA.pNameAdministrator),
@@ -159,6 +162,7 @@ fn answers(kind: Kind, data: &Data) -> bool {
             | (Kind::Ns, Data::Ns(_))
             | (Kind::Txt, Data::Txt(_))
             | (Kind::Soa, Data::Soa { .. })
+            | (Kind::Ptr, Data::Ptr(_))
     )
 }
 

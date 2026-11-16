@@ -13,9 +13,10 @@
 // findings.rs  turns answers into cards, with no Windows or network code in it
 
 mod findings;
-mod records;
+// records and resolver are also used by IP Information, for reverse lookups.
+pub(crate) mod records;
 #[cfg(windows)]
-mod resolver;
+pub(crate) mod resolver;
 
 #[cfg(test)]
 mod tests;

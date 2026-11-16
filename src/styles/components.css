@@ -227,6 +227,71 @@
 }
 
 
+/* A section of results labelled with where it came from: this PC, its DNS server or an outside service. */
+.source {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.source-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.source-head h2 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.source-tag {
+  padding: 1px var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+/* An outside service is marked more strongly, because the address leaves this PC. */
+.source-tag[data-external="true"] {
+  border-color: var(--status-warning);
+  color: var(--text);
+}
+
+.source-ask {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+}
+
+.source-ask p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.source-ask .button {
+  flex-shrink: 0;
+}
+
+.source-warning {
+  margin: 0 0 var(--space-2);
+  color: var(--text);
+}
+
+.source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+
 /* =========================
    Panels and Rows
    ========================= */
