@@ -170,10 +170,13 @@ fn run(resolver: &dyn Resolver, input: &str) -> Result<DnsReport, String> {
 #[cfg(windows)]
 #[tauri::command]
 pub async fn lookup_dns(domain: String) -> Result<DnsReport, String> {
+    crate::network::require()?;
     // The name is checked first, so a typo is refused without asking anyone anything.
     normalise(&domain)?;
-    tauri::async_runtime::spawn_blocking(move || run(&resolver::WindowsDns, &domain))
-        .await
+    let task = tauri::async_runtime::spawn_blocking(move || run(&resolver::WindowsDns, &domain));
+    // If network access is turned off meanwhile, this stops waiting and the answer is thrown away.
+    crate::network::run(task)
+        .await?
         // A failure here is turned into a plain message, so the domain is not repeated in it.
         .map_err(|_| "Tenax could not look this domain up.".to_string())?
 }

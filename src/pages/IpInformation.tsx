@@ -4,6 +4,7 @@ import type { Tool } from "../app/tools";
 import ActivityLog from "../components/ActivityLog";
 import FindingCard, { type Finding } from "../components/Finding";
 import ToolPage from "../components/ToolPage";
+import { useNetwork } from "../app/network";
 import VerdictBlock, { type Verdict } from "../components/VerdictBlock";
 
 /* =========================
@@ -32,7 +33,15 @@ type LookupState = "idle" | "loading" | "done";
 interface Lookup {
   state: LookupState;
   finding: Finding | null;
+  /* Why it did not run, such as network access being turned off while it waited. */
+  error?: string;
 }
+
+/* What the two optional lookups say while the sidebar switch is off. */
+const NETWORK_OFF = "Network access is off. Turn it on in the sidebar to use this lookup.";
+
+/* Reverse DNS goes to the DNS server this PC uses, so it needs network access but not always the internet. */
+const REVERSE_OFF = `${NETWORK_OFF} DNS queries need network access, but not necessarily an internet connection.`;
 
 const NOT_ASKED: Lookup = { state: "idle", finding: null };
 
@@ -65,6 +74,7 @@ function Source({
 /* The other two lookups send the address somewhere, so each has its own button. The one that */
 /* goes to an outside service asks for a second, explicit click that names the service. */
 export default function IpInformation({ tool }: { tool: Tool }) {
+  const { enabled } = useNetwork();
   const [address, setAddress] = useState("");
   const [state, setState] = useState<CheckState>("idle");
   const [report, setReport] = useState<IpReport | null>(null);
@@ -112,7 +122,7 @@ export default function IpInformation({ tool }: { tool: Tool }) {
 
   /* Runs one optional lookup for the address Tenax read, and keeps its card. */
   async function runLookup(command: string, set: (lookup: Lookup) => void) {
-    if (!report) return;
+    if (!enabled || !report) return;
     const mine = latest.current;
     set({ state: "loading", finding: null });
     try {
@@ -121,9 +131,8 @@ export default function IpInformation({ tool }: { tool: Tool }) {
       set({ state: "done", finding });
     } catch (reason) {
       if (mine !== latest.current) return;
-      set(NOT_ASKED);
-      setError(String(reason));
-      setState("error");
+      /* The error stays with this lookup, so the results already on screen are kept. */
+      set({ state: "idle", finding: null, error: String(reason) });
     }
   }
 
@@ -200,20 +209,27 @@ export default function IpInformation({ tool }: { tool: Tool }) {
             ) : (
               <div className="source-ask">
                 <p>
-                  {report.canReverse
-                    ? "Asks the DNS server this PC already uses which name this address has. The address is sent to that server, which may pass the question on."
+                  {report.canReverse && !enabled
+                    ? REVERSE_OFF
+                    : report.canReverse
+                    ? "Asks the DNS server this PC already uses which name this address has. The address is sent to that server, which may pass the question on. It needs network access, but not necessarily an internet connection."
                     : "Not offered for this kind of address, because it has no name worth asking for."}
                 </p>
                 {report.canReverse && (
                   <button
                     type="button"
                     className="button"
-                    disabled={reverse.state === "loading"}
+                    disabled={!enabled || reverse.state === "loading"}
                     onClick={() => runLookup("reverse_dns", setReverse)}
                   >
                     {reverse.state === "loading" ? "Looking up…" : "Look up name"}
                   </button>
                 )}
+              </div>
+            )}
+            {reverse.error && (
+              <div className="notice" data-tone="error" role="alert">
+                {reverse.error}
               </div>
             )}
           </Source>
@@ -244,7 +260,9 @@ export default function IpInformation({ tool }: { tool: Tool }) {
             ) : (
               <div className="source-ask">
                 <p>
-                  {report.canExternal
+                  {report.canExternal && !enabled
+                    ? NETWORK_OFF
+                    : report.canExternal
                     ? `Asks ${SERVICE}, an outside service, who runs this network and roughly where it is. It only runs if you confirm.`
                     : "Not offered for this address, because only public addresses can be looked up with an outside service."}
                 </p>
@@ -252,12 +270,17 @@ export default function IpInformation({ tool }: { tool: Tool }) {
                   <button
                     type="button"
                     className="button"
-                    disabled={owner.state === "loading"}
+                    disabled={!enabled || owner.state === "loading"}
                     onClick={() => setConfirming(true)}
                   >
                     {owner.state === "loading" ? "Looking up…" : "Look up owner…"}
                   </button>
                 )}
+              </div>
+            )}
+            {owner.error && (
+              <div className="notice" data-tone="error" role="alert">
+                {owner.error}
               </div>
             )}
           </Source>

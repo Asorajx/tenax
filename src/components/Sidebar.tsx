@@ -1,6 +1,8 @@
 import type { KeyboardEvent } from "react";
 import { House, Settings, type LucideIcon } from "lucide-react";
-import { TOOL_GROUPS } from "../app/tools";
+import { TOOL_GROUPS, type Tool } from "../app/tools";
+import NetworkAccess from "./NetworkAccess";
+import NetworkIndicator from "./NetworkIndicator";
 
 /* =========================
    Sidebar
@@ -25,7 +27,7 @@ function moveFocus(event: KeyboardEvent<HTMLElement>) {
 }
 
 export default function Sidebar({ page, onNavigate }: SidebarProps) {
-  const item = (id: string, label: string, Icon: LucideIcon) => (
+  const item = (id: string, label: string, Icon: LucideIcon, network?: Tool["network"]) => (
     <button
       key={id}
       type="button"
@@ -35,6 +37,7 @@ export default function Sidebar({ page, onNavigate }: SidebarProps) {
     >
       <Icon className="nav-icon" size={18} strokeWidth={1.75} aria-hidden="true" />
       {label}
+      <NetworkIndicator level={network} />
     </button>
   );
 
@@ -58,11 +61,14 @@ export default function Sidebar({ page, onNavigate }: SidebarProps) {
         {TOOL_GROUPS.map((group) => (
           <div key={group.id} className="sidebar-group">
             <h2>{group.label}</h2>
-            {group.tools.map((tool) => item(tool.id, tool.label, tool.icon))}
+            {group.tools.map((tool) => item(tool.id, tool.label, tool.icon, tool.network))}
           </div>
         ))}
 
-        <div className="sidebar-footer">{item("settings", "Settings", Settings)}</div>
+        <div className="sidebar-footer">
+          <NetworkAccess />
+          {item("settings", "Settings", Settings)}
+        </div>
       </nav>
     </aside>
   );

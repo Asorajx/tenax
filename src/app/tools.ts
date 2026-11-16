@@ -25,6 +25,8 @@ export interface Tool {
   plan: string[];
   /* What leaves the device when the tool runs. */
   privacy: string;
+  /* Whether the tool needs the network, or only uses it when asked. Left out for offline tools. */
+  network?: "required" | "optional";
   ready: boolean;
 }
 
@@ -63,6 +65,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
           "Compare the returned matches on this device",
         ],
         privacy: "Checks for known breaches by sharing only a small part of your password's digital fingerprint.",
+        network: "required",
         ready: true,
       },
     ],
@@ -122,7 +125,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         icon: Globe,
         summary: "Query DNS records for a domain.",
         plan: ["A, AAAA, MX, TXT, NS and CNAME records", "Mail security records such as SPF and DMARC"],
-        privacy: "Sends the domain name to the DNS server this PC already uses, which may pass it on, as it does for any website you visit. Nothing else leaves this PC.",
+        privacy: "Sends the domain name to the DNS server this PC already uses, which may pass it on, as it does for any website you visit. Nothing else leaves this PC. It needs network access to be on, but not necessarily an internet connection, since a DNS server on your own network can answer some names.",
+        network: "required",
         ready: true,
       },
       {
@@ -136,6 +140,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
           "Owner, network and approximate location from ipinfo.io, only if you confirm",
         ],
         privacy: "The address type is worked out on this PC. Reverse DNS sends the address to the DNS server this PC already uses. The owner and location lookup sends the address to ipinfo.io, an outside service, and only after you confirm it.",
+        network: "optional",
         ready: true,
       },
       {
@@ -149,6 +154,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
           "Expired, self-signed, untrusted and mismatched certificates explained",
         ],
         privacy: "Connects to the site you enter, on port 443, and only makes a secure handshake. It sends no web request, downloads nothing and follows no redirects. The site can see this PC's internet address, as any website can. No other service is contacted.",
+        network: "required",
         ready: true,
       },
     ],

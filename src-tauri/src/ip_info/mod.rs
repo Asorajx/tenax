@@ -90,17 +90,20 @@ pub fn inspect_ip(address: String) -> Result<IpReport, String> {
 #[cfg(windows)]
 #[tauri::command]
 pub async fn reverse_dns(address: String) -> Result<Finding, String> {
+    crate::network::require()?;
     let ip = checked(
         &address,
         Scope::reverse_dns,
         "This kind of address has no name worth asking for.",
     )?;
-    tauri::async_runtime::spawn_blocking(move || {
+    let task = tauri::async_runtime::spawn_blocking(move || {
         reverse(&crate::dns_lookup::resolver::WindowsDns, ip)
-    })
-    .await
-    // A failure here is turned into a plain message, so the address is not repeated in it.
-    .map_err(|_| "Tenax could not ask for this address's name.".to_string())
+    });
+    // If network access is turned off meanwhile, this stops waiting and the answer is thrown away.
+    crate::network::run(task)
+        .await?
+        // A failure here is turned into a plain message, so the address is not repeated in it.
+        .map_err(|_| "Tenax could not ask for this address's name.".to_string())
 }
 
 #[cfg(not(windows))]
@@ -113,12 +116,14 @@ pub async fn reverse_dns(_address: String) -> Result<Finding, String> {
 // has confirmed that the address will be sent to ipinfo.io. Only public addresses are accepted.
 #[tauri::command]
 pub async fn lookup_ip_owner(address: String) -> Result<Finding, String> {
+    crate::network::require()?;
     let ip = checked(
         &address,
         Scope::external,
         "Only public addresses can be looked up with an external service.",
     )?;
     let started = Instant::now();
-    let outcome = external::fetch(ip).await;
+    // The request is dropped, and its connection closed, if the switch is turned off meanwhile.
+    let outcome = crate::network::run(external::fetch(ip)).await?;
     Ok(findings::owner(ip, &outcome, started))
 }

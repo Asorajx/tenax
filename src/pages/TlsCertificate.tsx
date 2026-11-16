@@ -3,7 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Tool } from "../app/tools";
 import ActivityLog from "../components/ActivityLog";
 import FindingCard, { type Finding } from "../components/Finding";
+import NetworkNotice from "../components/NetworkNotice";
 import ToolPage from "../components/ToolPage";
+import { useNetwork } from "../app/network";
 import VerdictBlock, { type Verdict } from "../components/VerdictBlock";
 
 /* =========================
@@ -23,6 +25,7 @@ type CheckState = "idle" | "loading" | "done" | "error";
 /* A check only ever runs when Check is pressed. Nothing else starts one, and no other tool */
 /* hands an address to this page, because a check connects to the server. */
 export default function TlsCertificate({ tool }: { tool: Tool }) {
+  const { enabled } = useNetwork();
   const [host, setHost] = useState("");
   const [state, setState] = useState<CheckState>("idle");
   const [report, setReport] = useState<TlsReport | null>(null);
@@ -46,7 +49,7 @@ export default function TlsCertificate({ tool }: { tool: Tool }) {
 
   /* Asks the Rust backend to connect and read the certificate. */
   async function checkCertificate() {
-    if (!host.trim() || state === "loading") return;
+    if (!enabled || !host.trim() || state === "loading") return;
     const mine = ++latest.current;
     setNoticeSeen(true);
     setState("loading");
@@ -66,6 +69,7 @@ export default function TlsCertificate({ tool }: { tool: Tool }) {
 
   return (
     <ToolPage tool={tool} info={<p>{tool.privacy}</p>}>
+      <NetworkNotice />
       {noticeSeen ? (
         <p className="network-note">
           Uses the network: Tenax connects to the server you enter. Only public hosts on port 443 are allowed.
@@ -102,7 +106,7 @@ export default function TlsCertificate({ tool }: { tool: Tool }) {
             Clear
           </button>
         )}
-        <button type="submit" className="button button-primary" disabled={!host.trim() || state === "loading"}>
+        <button type="submit" className="button button-primary" disabled={!enabled || !host.trim() || state === "loading"}>
           {state === "loading" ? "Checking…" : "Check"}
         </button>
       </form>

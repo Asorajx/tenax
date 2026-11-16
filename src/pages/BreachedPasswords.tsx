@@ -4,7 +4,9 @@ import type { Tool } from "../app/tools";
 import ActivityLog from "../components/ActivityLog";
 import FindingCard, { type Finding } from "../components/Finding";
 import PasswordField from "../components/PasswordField";
+import NetworkNotice from "../components/NetworkNotice";
 import ToolPage from "../components/ToolPage";
+import { useNetwork } from "../app/network";
 
 /* =========================
    Breached Passwords
@@ -26,6 +28,7 @@ interface BreachedPasswordsProps {
 }
 
 export default function BreachedPasswords({ tool, onCheckStrength }: BreachedPasswordsProps) {
+  const { enabled } = useNetwork();
   const [password, setPassword] = useState("");
   const [state, setState] = useState<CheckState>("idle");
   const [findings, setFindings] = useState<Finding[]>([]);
@@ -40,7 +43,7 @@ export default function BreachedPasswords({ tool, onCheckStrength }: BreachedPas
 
   /* Asks the Rust backend to hash the password and look it up, then shows what comes back. */
   async function runCheck() {
-    if (!password || state === "loading") return;
+    if (!enabled || !password || state === "loading") return;
     setState("loading");
     const started = performance.now();
     try {
@@ -58,11 +61,12 @@ export default function BreachedPasswords({ tool, onCheckStrength }: BreachedPas
 
   return (
     <ToolPage tool={tool} info={<p>{tool.privacy}</p>}>
+      <NetworkNotice />
       <PasswordField value={password} onChange={changePassword} onSubmit={runCheck}>
         <button
           type="submit"
           className="button button-primary"
-          disabled={!password || state === "loading"}
+          disabled={!enabled || !password || state === "loading"}
         >
           {state === "loading" ? "Checking…" : "Check"}
         </button>

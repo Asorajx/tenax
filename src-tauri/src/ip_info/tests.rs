@@ -646,6 +646,8 @@ fn the_report_has_the_shape_the_interface_reads() {
 #[test]
 #[ignore]
 fn asks_windows_for_a_reverse_name() {
+    // These steps only run while network access is on.
+    crate::network::set_network_access(true);
     let finding = reverse(&crate::dns_lookup::resolver::WindowsDns, ip("8.8.8.8"));
     println!("{} | {:?}", finding.summary, finding.details);
     assert_eq!(finding.status, Status::Ok);

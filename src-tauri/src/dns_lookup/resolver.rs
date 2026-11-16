@@ -168,6 +168,11 @@ fn answers(kind: Kind, data: &Data) -> bool {
 
 impl Resolver for WindowsDns {
     fn query(&self, name: &str, kind: Kind) -> Answer {
+        // No question is asked once network access has been turned off. The answer is never shown,
+        // because the command that asked has already been cancelled.
+        if crate::network::require().is_err() {
+            return Err(Failure::NoServers);
+        }
         let name = CString::new(name).map_err(|_| Failure::Other(123))?;
         let mut found: *mut DNS_RECORDA = std::ptr::null_mut();
 
@@ -384,6 +389,8 @@ mod tests {
     #[test]
     #[ignore]
     fn asks_windows_dns() {
+        // These steps only run while network access is on.
+        crate::network::set_network_access(true);
         for kind in [
             Kind::A,
             Kind::Aaaa,

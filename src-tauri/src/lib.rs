@@ -4,6 +4,7 @@ mod email_headers;
 mod email_scam;
 mod finding;
 mod ip_info;
+mod network;
 mod tls_check;
 mod url_check;
 mod windows_security;
@@ -22,6 +23,8 @@ pub fn run() {
             ip_info::lookup_ip_owner,
             ip_info::reverse_dns,
             tls_check::check_tls,
+            network::network_access,
+            network::set_network_access,
             url_check::check_url,
             windows_security::check_windows_security
         ])

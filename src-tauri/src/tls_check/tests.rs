@@ -845,6 +845,8 @@ fn long_name_lists_are_capped() {
 #[test]
 #[ignore]
 fn checks_real_servers() {
+    // These steps only run while network access is on.
+    crate::network::set_network_access(true);
     for (host, expect) in [
         ("example.com", "Certificate accepted by Windows."),
         ("expired.badssl.com", "This certificate has problems."),

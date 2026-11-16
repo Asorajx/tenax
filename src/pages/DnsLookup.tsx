@@ -3,7 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Tool } from "../app/tools";
 import ActivityLog from "../components/ActivityLog";
 import FindingCard, { type Finding } from "../components/Finding";
+import NetworkNotice from "../components/NetworkNotice";
 import ToolPage from "../components/ToolPage";
+import { useNetwork } from "../app/network";
 import VerdictBlock, { type Verdict } from "../components/VerdictBlock";
 
 /* =========================
@@ -22,7 +24,13 @@ type CheckState = "idle" | "loading" | "done" | "error";
 
 /* A lookup only ever runs when Look up is pressed. Nothing else starts one, and no other tool */
 /* hands an address to this page, because a lookup sends the domain name over the network. */
+/* A DNS server on the user's own network can answer some names, so a lookup needs Tenax's network */
+/* access to be on, but not always an internet connection. */
+const NO_INTERNET_NEEDED =
+  "DNS queries need network access, but not necessarily an internet connection: a DNS server on your own network can answer some names.";
+
 export default function DnsLookup({ tool }: { tool: Tool }) {
+  const { enabled } = useNetwork();
   const [domain, setDomain] = useState("");
   const [state, setState] = useState<CheckState>("idle");
   const [report, setReport] = useState<DnsReport | null>(null);
@@ -46,7 +54,7 @@ export default function DnsLookup({ tool }: { tool: Tool }) {
 
   /* Asks the Rust backend to look the name up with this PC's DNS server. */
   async function lookUp() {
-    if (!domain.trim() || state === "loading") return;
+    if (!enabled || !domain.trim() || state === "loading") return;
     const mine = ++latest.current;
     setNoticeSeen(true);
     setState("loading");
@@ -66,15 +74,17 @@ export default function DnsLookup({ tool }: { tool: Tool }) {
 
   return (
     <ToolPage tool={tool} info={<p>{tool.privacy}</p>}>
+      <NetworkNotice />
       {noticeSeen ? (
         <p className="network-note">
-          Uses the network: the domain name is sent to this PC's DNS server. Tenax's other checks run offline.
+          Uses the network: the domain name is sent to this PC's DNS server. Tenax's other checks run offline.{" "}
+          {NO_INTERNET_NEEDED}
         </p>
       ) : (
         <div className="notice" role="note">
           <strong>This lookup uses the network.</strong> Tenax will send the domain name to the DNS server this PC
           already uses, the same one your browser uses. That server may pass the question on to others, as it does for
-          any website you visit. Nothing else is sent, and Tenax's other checks run offline.
+          any website you visit. Nothing else is sent, and Tenax's other checks run offline. {NO_INTERNET_NEEDED}
         </div>
       )}
 
@@ -101,7 +111,7 @@ export default function DnsLookup({ tool }: { tool: Tool }) {
             Clear
           </button>
         )}
-        <button type="submit" className="button button-primary" disabled={!domain.trim() || state === "loading"}>
+        <button type="submit" className="button button-primary" disabled={!enabled || !domain.trim() || state === "loading"}>
           {state === "loading" ? "Looking up…" : "Look up"}
         </button>
       </form>

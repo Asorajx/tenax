@@ -15,11 +15,14 @@ use crate::finding::Finding;
 // Called from the interface with invoke("check_breached_password", { password }).
 // The password only travels from the window to this function on this PC.
 #[tauri::command]
-pub async fn check_breached_password(password: String) -> Vec<Finding> {
-    let (outcome, steps) = lookup::run(&password).await;
+pub async fn check_breached_password(password: String) -> Result<Vec<Finding>, String> {
+    // The lookup goes to Have I Been Pwned, so it only runs while network access is on, and is
+    // dropped if the switch is turned off while it is waiting.
+    crate::network::require()?;
+    let (outcome, steps) = crate::network::run(lookup::run(&password)).await?;
 
     let mut finding = findings::build(&outcome);
     // The finding carries the steps that produced it.
     finding.steps = steps;
-    vec![finding]
+    Ok(vec![finding])
 }

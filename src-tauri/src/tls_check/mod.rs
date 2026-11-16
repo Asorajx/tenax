@@ -66,6 +66,8 @@ struct Windows;
 impl Transport for Windows {
     fn resolve(&self, host: &str) -> Result<Vec<IpAddr>, String> {
         use std::net::ToSocketAddrs;
+        // No step starts once network access has been turned off.
+        crate::network::require()?;
         (host, PORT)
             .to_socket_addrs()
             .map(|found| found.map(|addr| addr.ip()).collect())
@@ -73,6 +75,12 @@ impl Transport for Windows {
     }
 
     fn handshake(&self, addr: SocketAddr, host: &str, verify: bool) -> Result<Der, Failure> {
+        // No connection starts once network access has been turned off.
+        crate::network::require().map_err(|text| Failure {
+            stage: Stage::Connect,
+            code: None,
+            text,
+        })?;
         session::handshake(addr, host, verify)
     }
 }
@@ -271,10 +279,13 @@ fn unix_now() -> i64 {
 #[cfg(windows)]
 #[tauri::command]
 pub async fn check_tls(host: String) -> Result<TlsReport, String> {
+    crate::network::require()?;
     // A name that cannot be used is refused first, without a thread or a lookup.
     target::parse(&host)?;
-    tauri::async_runtime::spawn_blocking(move || run(&Windows, &host, unix_now()))
-        .await
+    let task = tauri::async_runtime::spawn_blocking(move || run(&Windows, &host, unix_now()));
+    // If network access is turned off meanwhile, this stops waiting and the result is thrown away.
+    crate::network::run(task)
+        .await?
         // A failure here is turned into a plain message, so the host is not repeated in it.
         .map_err(|_| "Tenax could not check this certificate.".to_string())?
 }

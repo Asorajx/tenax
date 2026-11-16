@@ -297,3 +297,102 @@
     padding: var(--space-5) var(--space-4);
   }
 }
+
+
+/* =========================
+   Network Access Switch
+   ========================= */
+
+.network-toggle {
+  margin-bottom: var(--space-2);
+}
+
+.network-toggle button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 5px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.network-toggle button:hover,
+.network-toggle button[aria-checked="true"] {
+  color: var(--text);
+}
+
+.network-toggle button[aria-checked="true"] .nav-icon {
+  color: var(--accent);
+}
+
+/* The track and the knob that slides along it. */
+.network-toggle .switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 28px;
+  height: 16px;
+  margin-left: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.network-toggle .switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform var(--transition), background var(--transition);
+}
+
+.network-toggle button[aria-checked="true"] .switch {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.network-toggle button[aria-checked="true"] .switch::after {
+  background: var(--accent);
+  transform: translateX(12px);
+}
+
+.network-toggle p {
+  margin: 0;
+  padding: 0 var(--space-2) 0 calc(var(--space-2) + 18px + var(--space-2));
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+
+/* =========================
+   Network Indicator
+   ========================= */
+
+/* A small Wi-Fi mark at the right of a tool's name. It is always muted, and a little warmer while */
+/* network access is on. A click on it still opens the tool, since it sits inside the row. */
+.network-indicator {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--text-faint);
+  opacity: 0.6;
+  transition: color var(--transition), opacity var(--transition);
+}
+
+.network-indicator[data-on="true"] {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.nav-item:hover .network-indicator {
+  opacity: 1;
+}

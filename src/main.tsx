@@ -7,6 +7,7 @@ import "./styles/shell.css";
 import "./styles/components.css";
 import App from "./App";
 import { startFluidHover } from "./app/fluidHover";
+import { NetworkProvider } from "./app/network";
 import { applyTheme, loadTheme } from "./app/theme";
 
 /* Apply the saved theme before the first render to avoid a flash. */
@@ -15,6 +16,8 @@ startFluidHover();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <NetworkProvider>
+      <App />
+    </NetworkProvider>
   </React.StrictMode>,
 );
