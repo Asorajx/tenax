@@ -43,14 +43,14 @@ export const TOOL_GROUPS: ToolGroup[] = [
         id: "password-strength",
         label: "Password Strength",
         icon: KeyRound,
-        summary: "Estimate how well a password resists guessing.",
+        summary: "See how difficult your password is to guess and how to make it stronger.",
         plan: [
           "Length, character variety and common patterns",
           "Matches against known weak passwords",
           "Why each weakness makes guessing easier",
         ],
         privacy: "Runs entirely on this device. The password is never stored or sent.",
-        ready: false,
+        ready: true,
       },
       {
         id: "password-breach",

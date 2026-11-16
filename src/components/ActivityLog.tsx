@@ -102,7 +102,8 @@ export default function ActivityLog({ title, findings, seconds, footer }: Activi
       <div className="terminal-body">
         {findings.map((finding) =>
           /* Simulated results have no steps, so they fall back to the check's own description. */
-          (finding.steps?.length ? finding.steps : [undefined]).map((step, index) => (
+          /* A finding that needs no steps of its own, next to one that has them, is left out. */
+          (finding.steps?.length ? finding.steps : hasSteps ? [] : [undefined]).map((step, index) => (
             <div key={`${tab}-${finding.id}-${index}`} className="terminal-entry">
               <p className="terminal-command">
                 {tab === "basic" ? (step ? step.plain : finding.checked) : (step ? step.action : "No technical log: simulated result")}

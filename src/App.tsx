@@ -3,6 +3,7 @@ import { useTheme } from "./app/theme";
 import { ALL_TOOLS, TOOL_GROUPS } from "./app/tools";
 import Sidebar from "./components/Sidebar";
 import Home from "./pages/Home";
+import PasswordStrength from "./pages/PasswordStrength";
 import PlannedTool from "./pages/PlannedTool";
 import Settings from "./pages/Settings";
 import WindowsSecurity from "./pages/WindowsSecurity";
@@ -56,6 +57,7 @@ export default function App() {
 
     if (id === "home") return <Home onNavigate={setPage} />;
     if (id === "settings") return <Settings theme={theme} onThemeChange={setTheme} />;
+    if (tool?.id === "password-strength") return <PasswordStrength tool={tool} />;
     if (tool?.id === "windows-security") return <WindowsSecurity tool={tool} />;
     return tool && <PlannedTool tool={tool} />;
   }

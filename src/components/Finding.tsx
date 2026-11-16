@@ -61,8 +61,8 @@ export default function FindingCard({ finding }: { finding: Finding }) {
 
       {finding.details && (
         <ul className="finding-items">
-          {finding.details.map((detail) => (
-            <li key={detail.label}>
+          {finding.details.map((detail, index) => (
+            <li key={`${detail.label}-${index}`}>
               <span className="finding-dot" data-active={detail.active} aria-hidden="true" />
               <span>{detail.label}</span>
               <span className="finding-value">{detail.value}</span>

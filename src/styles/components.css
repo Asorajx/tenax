@@ -127,6 +127,76 @@
 
 
 /* =========================
+   Text Field
+   ========================= */
+
+/* A password box with its buttons beside it. */
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.field input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  transition: border-color var(--transition);
+}
+
+.field input:focus-visible {
+  border-color: var(--accent);
+  outline: 0;
+}
+
+/* Edge and WebView2 add their own reveal button, which would be a second one beside ours. */
+.field input::-ms-reveal,
+.field input::-ms-clear {
+  display: none;
+}
+
+/* The show button reuses the icon button, but must not take the info popover's anchor. */
+.field .icon-button {
+  anchor-name: none;
+}
+
+/* Only the icon changes colour on hover, with no square behind it. */
+.field .icon-button:hover {
+  background: none;
+}
+
+/* Segoe Fluent Icons is the icon font on Windows 11. Windows 10 has Segoe MDL2 Assets. */
+.reveal-glyph {
+  display: block;
+  width: 20px;
+  height: 20px;
+  font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets";
+  font-size: 20px;
+  line-height: 20px;
+  text-align: center;
+  animation: reveal-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes reveal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+.field input::placeholder {
+  color: var(--text-faint);
+  font-family: var(--font-sans);
+}
+
+
+/* =========================
    Panels and Rows
    ========================= */
 
