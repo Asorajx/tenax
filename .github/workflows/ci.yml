@@ -1,0 +1,35 @@
+name: CI
+
+# Checks every push and pull request: type-check, build and Rust tests.
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    # The Windows checks use the windows crate, which only builds on Windows.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install packages
+        run: npm ci
+
+      # Runs tsc and vite. Tauri also needs the built dist folder to compile the Rust code.
+      - name: Build the interface
+        run: npm run build
+
+      - name: Test the Rust code
+        run: cargo test
+        working-directory: src-tauri
