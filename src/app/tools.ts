@@ -1,3 +1,16 @@
+import {
+  FileBadge,
+  Globe,
+  KeyRound,
+  Link,
+  LockOpen,
+  MailExclamationPoint,
+  MailSearch,
+  MonitorCheck,
+  Network,
+  type LucideIcon,
+} from "lucide-react";
+
 /* =========================
    Tool Registry
    ========================= */
@@ -6,6 +19,7 @@
 export interface Tool {
   id: string;
   label: string;
+  icon: LucideIcon;
   summary: string;
   /* What the tool will check, shown until it is built. */
   plan: string[];
@@ -28,6 +42,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         id: "password-strength",
         label: "Password Strength",
+        icon: KeyRound,
         summary: "Estimate how well a password resists guessing.",
         plan: [
           "Length, character variety and common patterns",
@@ -40,6 +55,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         id: "password-breach",
         label: "Breached Passwords",
+        icon: LockOpen,
         summary: "Check whether a password appears in known data breaches.",
         plan: [
           "Hash the password locally",
@@ -58,6 +74,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         id: "url-check",
         label: "URL Checker",
+        icon: Link,
         summary: "Inspect a link for signs of phishing before opening it.",
         plan: [
           "Lookalike domains and misleading subdomains",
@@ -70,6 +87,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         id: "email-scam",
         label: "Email Scam Checker",
+        icon: MailExclamationPoint,
         summary: "Review an email's text for common scam indicators.",
         plan: [
           "Urgency, threats and requests for payment or credentials",
@@ -82,6 +100,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         id: "email-headers",
         label: "Email Headers",
+        icon: MailSearch,
         summary: "Read SPF, DKIM, DMARC and routing from raw headers.",
         plan: [
           "SPF, DKIM and DMARC results",
@@ -100,6 +119,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         id: "dns-lookup",
         label: "DNS Lookup",
+        icon: Globe,
         summary: "Query DNS records for a domain.",
         plan: ["A, AAAA, MX, TXT, NS and CNAME records", "Mail security records such as SPF and DMARC"],
         privacy: "Sends the domain name to a DNS resolver.",
@@ -108,6 +128,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         id: "ip-info",
         label: "IP Information",
+        icon: Network,
         summary: "Look up ownership, location and reputation for an IP address.",
         plan: ["Network owner and approximate location", "Reputation from an external service, if enabled"],
         privacy: "Sends the IP address to a third-party lookup service.",
@@ -116,6 +137,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         id: "tls-check",
         label: "TLS Certificate",
+        icon: FileBadge,
         summary: "Inspect a site's certificate and TLS configuration.",
         plan: ["Certificate validity, issuer and expiry", "Supported protocol versions"],
         privacy: "Connects directly to the site you enter.",
@@ -130,6 +152,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         id: "windows-security",
         label: "Windows Security",
+        icon: MonitorCheck,
         summary: "Review antivirus, firewall and update settings on this PC.",
         plan: [],
         privacy: "Reads settings on this device only. Nothing is changed or sent.",

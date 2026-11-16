@@ -6,10 +6,12 @@ import "./styles/base.css";
 import "./styles/shell.css";
 import "./styles/components.css";
 import App from "./App";
+import { startFluidHover } from "./app/fluidHover";
 import { applyTheme, loadTheme } from "./app/theme";
 
 /* Apply the saved theme before the first render to avoid a flash. */
 applyTheme(loadTheme());
+startFluidHover();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

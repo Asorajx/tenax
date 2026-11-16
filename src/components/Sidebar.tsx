@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from "react";
+import { House, Settings, type LucideIcon } from "lucide-react";
 import { TOOL_GROUPS } from "../app/tools";
 
 /* =========================
@@ -24,7 +25,7 @@ function moveFocus(event: KeyboardEvent<HTMLElement>) {
 }
 
 export default function Sidebar({ page, onNavigate }: SidebarProps) {
-  const item = (id: string, label: string) => (
+  const item = (id: string, label: string, Icon: LucideIcon) => (
     <button
       key={id}
       type="button"
@@ -32,6 +33,7 @@ export default function Sidebar({ page, onNavigate }: SidebarProps) {
       aria-current={page === id ? "page" : undefined}
       onClick={() => onNavigate(id)}
     >
+      <Icon className="nav-icon" size={18} strokeWidth={1.75} aria-hidden="true" />
       {label}
     </button>
   );
@@ -51,16 +53,16 @@ export default function Sidebar({ page, onNavigate }: SidebarProps) {
       </div>
 
       <nav className="sidebar-nav" aria-label="Main" onKeyDown={moveFocus}>
-        {item("home", "Home")}
+        {item("home", "Home", House)}
 
         {TOOL_GROUPS.map((group) => (
           <div key={group.id} className="sidebar-group">
             <h2>{group.label}</h2>
-            {group.tools.map((tool) => item(tool.id, tool.label))}
+            {group.tools.map((tool) => item(tool.id, tool.label, tool.icon))}
           </div>
         ))}
 
-        <div className="sidebar-footer">{item("settings", "Settings")}</div>
+        <div className="sidebar-footer">{item("settings", "Settings", Settings)}</div>
       </nav>
     </aside>
   );

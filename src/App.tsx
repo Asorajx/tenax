@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "./app/theme";
 import { ALL_TOOLS, TOOL_GROUPS } from "./app/tools";
 import Sidebar from "./components/Sidebar";
@@ -40,20 +40,36 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [setTheme]);
 
-  const tool = ALL_TOOLS.find((candidate) => candidate.id === page);
+  /* Every page that has been opened stays loaded, so a tool keeps its results */
+  /* when you switch to another page and come back. */
+  const [opened, setOpened] = useState([page]);
+  if (!opened.includes(page)) setOpened([...opened, page]);
+
+  /* Each newly shown page starts scrolled to the top. */
+  const content = useRef<HTMLElement>(null);
+  useEffect(() => {
+    content.current?.scrollTo(0, 0);
+  }, [page]);
+
+  function renderPage(id: string) {
+    const tool = ALL_TOOLS.find((candidate) => candidate.id === id);
+
+    if (id === "home") return <Home onNavigate={setPage} />;
+    if (id === "settings") return <Settings theme={theme} onThemeChange={setTheme} />;
+    if (tool?.id === "windows-security") return <WindowsSecurity tool={tool} />;
+    return tool && <PlannedTool tool={tool} />;
+  }
 
   return (
     <div className="app">
       <Sidebar page={page} onNavigate={setPage} />
 
-      {/* The key resets scroll position and page state on navigation. */}
-      <main className="content" key={page}>
-        <div className="content-inner">
-          {page === "home" && <Home onNavigate={setPage} />}
-          {page === "settings" && <Settings theme={theme} onThemeChange={setTheme} />}
-          {tool?.id === "windows-security" && <WindowsSecurity tool={tool} />}
-          {tool && tool.id !== "windows-security" && <PlannedTool tool={tool} />}
-        </div>
+      <main className="content" ref={content}>
+        {opened.map((id) => (
+          <div key={id} className="content-inner" hidden={id !== page}>
+            {renderPage(id)}
+          </div>
+        ))}
       </main>
     </div>
   );

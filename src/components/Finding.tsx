@@ -1,63 +1,81 @@
-import { Fragment } from "react";
+import { CircleAlert, CircleCheck, CircleHelp, Info, TriangleAlert, type LucideIcon } from "lucide-react";
 
 /* =========================
    Finding
    ========================= */
 
 /* Every tool reports results in this shape. There is no score. */
-export type FindingStatus = "ok" | "info" | "warning" | "risk";
+/* It must match the Finding struct in src-tauri/src/finding.rs. */
+export type FindingStatus = "ok" | "info" | "warning" | "risk" | "unknown";
+
+export interface FindingDetail {
+  label: string;
+  value: string;
+  /* Set for things that are either on or off. */
+  active?: boolean;
+}
+
+/* One thing Tenax did while running a check. It must match the Step struct in finding.rs. */
+export interface Step {
+  action: string;
+  plain: string;
+  method: string;
+  ok: boolean;
+  result: string;
+  ms: number;
+}
 
 export interface Finding {
   id: string;
   status: FindingStatus;
   title: string;
-  detected: string;
+  summary: string;
+  checked: string;
   why: string;
   action?: string;
-  details?: { label: string; value: string }[];
+  details?: FindingDetail[];
+  /* Left out by simulated results, which did not run anything. */
+  steps?: Step[];
 }
 
-/* The label carries the meaning so colour is never the only signal. */
-const STATUS_LABELS: Record<FindingStatus, string> = {
-  ok: "No issue found",
-  info: "Note",
-  warning: "Needs attention",
-  risk: "Action recommended",
+/* Each status has its own icon shape and label, so colour is never the only signal. */
+const STATUSES: Record<FindingStatus, { label: string; icon: LucideIcon }> = {
+  ok: { label: "No issue found", icon: CircleCheck },
+  info: { label: "Note", icon: Info },
+  warning: { label: "Needs attention", icon: TriangleAlert },
+  risk: { label: "Action recommended", icon: CircleAlert },
+  unknown: { label: "Could not check", icon: CircleHelp },
 };
 
+/* One card per check. It shows the state, what is on and off, and what to do if anything. */
 export default function FindingCard({ finding }: { finding: Finding }) {
+  const status = STATUSES[finding.status];
+
   return (
     <article className="finding" data-status={finding.status}>
       <header className="finding-header">
-        <span className="finding-status">{STATUS_LABELS[finding.status]}</span>
+        <status.icon className="finding-icon" size={18} strokeWidth={1.75} role="img" aria-label={status.label} />
         <h3>{finding.title}</h3>
+        <span className="finding-state">{finding.summary}</span>
       </header>
 
-      <dl className="finding-body">
-        <dt>Detected</dt>
-        <dd>{finding.detected}</dd>
-        <dt>Why it matters</dt>
-        <dd>{finding.why}</dd>
-        {finding.action && (
-          <>
-            <dt>Recommended</dt>
-            <dd>{finding.action}</dd>
-          </>
-        )}
-      </dl>
-
       {finding.details && (
-        <details>
-          <summary>Technical details</summary>
-          <dl className="details-list">
-            {finding.details.map((detail) => (
-              <Fragment key={detail.label}>
-                <dt>{detail.label}</dt>
-                <dd>{detail.value}</dd>
-              </Fragment>
-            ))}
-          </dl>
-        </details>
+        <ul className="finding-items">
+          {finding.details.map((detail) => (
+            <li key={detail.label}>
+              <span className="finding-dot" data-active={detail.active} aria-hidden="true" />
+              <span>{detail.label}</span>
+              <span className="finding-value">{detail.value}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {finding.action && (
+        <p className="finding-action">
+          <strong>What to do</strong>
+          {finding.action}
+        </p>
       )}
     </article>
   );

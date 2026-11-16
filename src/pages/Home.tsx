@@ -26,7 +26,7 @@ export default function Home({ onNavigate }: { onNavigate: (page: string) => voi
                   <span>{tool.summary}</span>
                 </span>
                 <span className="row-meta" data-ready={tool.ready}>
-                  {tool.ready ? "Preview" : "Planned"}
+                  {tool.ready ? "Available" : "Planned"}
                 </span>
               </button>
             ))}

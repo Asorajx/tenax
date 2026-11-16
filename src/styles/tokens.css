@@ -14,6 +14,7 @@
   --text-base: 13px;
   --text-md: 15px;
   --text-lg: 20px;
+  --text-xl: 26px;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -49,6 +50,15 @@
   --status-info: #9aa3ab;
   --status-warning: #d9a441;
   --status-risk: #e0705f;
+
+  /* The terminal panel has its own colours, so it reads as a separate window. */
+  --terminal-bg: #0c0c0c;
+  --terminal-bar: #1f1f1f;
+  --terminal-border: #4a4f55;
+  --terminal-text: #e4e4e4;
+  --terminal-muted: #a6a6a6;
+  --terminal-faint: #767676;
+  --terminal-prompt: #6aabb0;
 }
 
 
@@ -78,4 +88,12 @@
   --status-info: #57616a;
   --status-warning: #8f6200;
   --status-risk: #b3402f;
+
+  --terminal-bg: #e8ecee;
+  --terminal-bar: #dadfe3;
+  --terminal-border: #b1bac1;
+  --terminal-text: #1d2226;
+  --terminal-muted: #48525a;
+  --terminal-faint: #66707a;
+  --terminal-prompt: #2f7479;
 }

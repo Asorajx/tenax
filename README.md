@@ -23,6 +23,7 @@ Checks run on the device wherever possible, and each tool states what leaves the
 ## Features
 
 - Desktop application for Windows
+- Read-only Windows security check for antivirus, firewall and Windows Update
 - Sidebar navigation grouped by tool type
 - Consistent findings layout with expandable technical details
 - Light, dark and system themes
@@ -100,6 +101,12 @@ Other useful commands:
 npm run dev         # run only the interface in a browser
 npm run build       # type-check and build the interface
 npm run tauri build # build the Windows installer
+```
+
+Run the Rust tests from the `src-tauri` folder:
+
+```bash
+cargo test
 ```
 
 If PowerShell blocks npm, use `npm.cmd` instead of `npm`.
