@@ -170,7 +170,7 @@ export default function FindingCard({ finding, link, onAnalyseUrl }: FindingCard
 
   if (foldable) {
     return (
-      <details className="finding" data-status={finding.status}>
+      <details className="finding" data-status={finding.status} data-finding={finding.id}>
         <summary className="finding-header">{header}</summary>
         {body}
       </details>
@@ -178,7 +178,7 @@ export default function FindingCard({ finding, link, onAnalyseUrl }: FindingCard
   }
 
   return (
-    <article className="finding" data-status={finding.status}>
+    <article className="finding" data-status={finding.status} data-finding={finding.id}>
       <header className="finding-header">{header}</header>
       {body}
     </article>

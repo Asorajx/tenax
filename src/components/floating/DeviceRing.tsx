@@ -31,13 +31,18 @@ export function statusWord(status: string) {
   }
 }
 
-/* The one line in the middle. It only speaks for the three settings, and never says the PC is safe. */
+/* The one line in the middle. It speaks for every check the tool made, not only the three on the ring, */
+/* and never says the PC is safe. */
 export function ringSummary(phase: DevicePhase, findings: Finding[]) {
   if (phase === "loading") return { title: "Checking" };
   if (phase === "error") return { title: "Could not check" };
   if (phase !== "done") return { title: "Not checked" };
 
-  const statuses = DEVICE_CHECKS.map((check) => findings.find((finding) => finding.id === check.id)?.status);
+  /* A missing ring check counts as not read, so the line cannot be cleaner than the ring. */
+  const statuses = [
+    ...findings.map((finding) => finding.status),
+    ...DEVICE_CHECKS.filter((check) => !findings.some((finding) => finding.id === check.id)).map(() => undefined),
+  ];
   if (statuses.some((status) => status === "warning" || status === "risk")) {
     return { title: "Needs attention" };
   }
@@ -48,6 +53,13 @@ export function ringSummary(phase: DevicePhase, findings: Finding[]) {
     return { title: "Worth a look" };
   }
   return { title: "Nothing flagged" };
+}
+
+/* The findings that have no segment on the ring. The Home screen lists them beside the ring. They are */
+/* taken from the findings, so a new Windows Security card is included without any change here. */
+export function extraChecks(phase: DevicePhase, findings: Finding[]) {
+  if (phase !== "done") return [];
+  return findings.filter((finding) => !DEVICE_CHECKS.some((check) => check.id === finding.id));
 }
 
 /* A point on the ring, for an angle in degrees measured clockwise from the right. */

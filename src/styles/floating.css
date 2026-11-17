@@ -506,6 +506,50 @@
   color: var(--ws-device);
 }
 
+/* The checks without a segment on the ring, one quiet row each, tight under it. */
+.home-checks {
+  align-self: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  animation: ring-settle 260ms ease-out 500ms backwards;
+}
+
+.home-checks button {
+  display: grid;
+  grid-template-columns: 10px auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  width: 100%;
+  padding: 3px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.home-checks button:hover {
+  background: var(--glass-hover);
+}
+
+.home-check-name {
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.home-check-state {
+  overflow: hidden;
+  color: var(--text-faint);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .home-device-note[data-hidden] {
   visibility: hidden;
 }
@@ -654,6 +698,8 @@
   }
 
   .home-device {
+    justify-self: start;
+    margin-right: 0;
     align-items: flex-start;
     text-align: left;
   }

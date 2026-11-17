@@ -4,7 +4,7 @@ import { useDeviceCheck } from "../app/deviceCheck";
 import { ALL_TOOLS } from "../app/tools";
 import { useRecent } from "../app/recent";
 import { WORKSPACES } from "../app/workspaces";
-import DeviceRing from "../components/floating/DeviceRing";
+import DeviceRing, { extraChecks, statusWord } from "../components/floating/DeviceRing";
 
 /* =========================
    Home (Minimal)
@@ -15,7 +15,16 @@ const MIN_READ_MS = 700;
 
 /* The landing screen for the floating layout. On the left is what Tenax is and the main action. On the */
 /* right is a ring for the three Windows Security checks, which stays "Not checked" until someone asks. */
-export default function HomeMinimal({ onOpen, onOpenTool }: { onOpen: (workspace: string) => void; onOpenTool: (tool: string) => void }) {
+export default function HomeMinimal({
+  onOpen,
+  onOpenTool,
+  onOpenFinding,
+}: {
+  onOpen: (workspace: string) => void;
+  onOpenTool: (tool: string) => void;
+  /* Opens Windows Security at one of its cards. */
+  onOpenFinding: (finding: string) => void;
+}) {
   const { results } = useRecent();
   const { phase: checkPhase, findings, checkedAt, error, run } = useDeviceCheck();
 
@@ -33,6 +42,9 @@ export default function HomeMinimal({ onOpen, onOpenTool }: { onOpen: (workspace
   const more = WORKSPACES.filter((workspace) => workspace.id === "network" || workspace.id === "passwords");
 
   const time = checkedAt?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  /* The checks that have no segment on the ring, which the line in the middle also counts. */
+  const extra = extraChecks(phase, findings);
 
   return (
     <div className="home">
@@ -65,6 +77,23 @@ export default function HomeMinimal({ onOpen, onOpenTool }: { onOpen: (workspace
               {phase === "loading" ? "Checking…" : phase === "idle" ? "Check this PC" : "Check again"}
             </button>
           </div>
+          {extra.length > 0 && (
+            <ul className="home-checks" aria-label="Other Windows Security checks">
+              {extra.map((check) => (
+                <li key={check.id}>
+                  <button
+                    type="button"
+                    onClick={() => onOpenFinding(check.id)}
+                    aria-label={`${check.title}, ${check.summary}, ${statusWord(check.status)}`}
+                  >
+                    <span className="home-check-dot" data-status={check.status} aria-hidden="true" />
+                    <span className="home-check-name">{check.title}</span>
+                    <span className="home-check-state">{check.summary}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           {/* Always present, so the page does not shift while a check runs. */}
           <p
             className="home-device-note"

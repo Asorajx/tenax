@@ -46,6 +46,14 @@ export default function App() {
     setPage(tool);
   }
 
+  /* The Home screen can open Windows Security at one card. The card is scrolled to once, then forgotten. */
+  const [focusFinding, setFocusFinding] = useState<string | null>(null);
+  const clearFocusFinding = useCallback(() => setFocusFinding(null), []);
+  function openFinding(finding: string) {
+    setFocusFinding(finding);
+    setPage("windows-security");
+  }
+
   /* The Email Scam Checker can send a link to the URL Checker once that tool is built. Until */
   /* then it is not offered, so there is no button that leads nowhere. */
   const urlChecker = ALL_TOOLS.find((candidate) => candidate.id === "url-check");
@@ -96,7 +104,7 @@ export default function App() {
     const tool = ALL_TOOLS.find((candidate) => candidate.id === id);
 
     if (id === "home") {
-      return <HomeMinimal onOpen={(workspace) => setPage(toolFor(workspace))} onOpenTool={setPage} />;
+      return <HomeMinimal onOpen={(workspace) => setPage(toolFor(workspace))} onOpenTool={setPage} onOpenFinding={openFinding} />;
     }
     if (id === "settings") {
       return <Settings theme={theme} onThemeChange={setTheme} tab={settingsTab} onTabChange={setSettingsTab} />;
@@ -121,7 +129,7 @@ export default function App() {
           handoff={handoff?.tool === "password-strength" ? handoff : null}
           onHandoffUsed={clearHandoff}
         />;
-    if (tool?.id === "windows-security") return <WindowsSecurity tool={tool} />;
+    if (tool?.id === "windows-security") return <WindowsSecurity tool={tool} focus={focusFinding} onFocused={clearFocusFinding} />;
     return null;
   }
 

@@ -2,7 +2,10 @@
 // why it checked, and what to do.
 // There is no Windows code here, so every case can be tested with made-up readings.
 
-use super::{FirewallProfiles, ProductState, Readings, SecurityProduct, UpdateStatus};
+use super::{
+    Account, FirewallProfiles, ProductState, Readings, RemoteAccess, SecureBoot, SecurityProduct,
+    ServiceState, Uac, UpdateStatus,
+};
 use crate::finding::{Detail, Finding, Status, detail, join_names, switch};
 
 // A longer gap than this since the last update check is reported.
@@ -13,6 +16,10 @@ pub fn build(readings: &Readings) -> Vec<Finding> {
         antivirus(&readings.antivirus),
         firewall(&readings.firewall, &readings.other_firewalls),
         updates(&readings.updates),
+        startup(&readings.secure_boot, &readings.tpm),
+        uac(&readings.uac),
+        remote_access(&readings.remote_access),
+        sign_in(&readings.auto_sign_in),
     ];
 
     // Most serious first.
@@ -183,7 +190,10 @@ fn antivirus(reading: &Result<Vec<SecurityProduct>, String>) -> Finding {
     if current.is_empty() {
         return ANTIVIRUS.finding(
             Status::Warning,
-            format!("On, definitions out of date · {}", join_names(&active, "and")),
+            format!(
+                "On, definitions out of date · {}",
+                join_names(&active, "and")
+            ),
             Some("Open your antivirus and check for updates.".to_string()),
             details,
         );
@@ -385,12 +395,399 @@ fn updates(reading: &Result<UpdateStatus, String>) -> Finding {
 }
 
 // =========================
+// Startup protection
+// =========================
+
+const STARTUP: Check = Check {
+    id: "startup",
+    title: "Startup protection",
+    checked: "I asked Windows whether this PC starts with Secure Boot, and whether it has a \
+              TPM security chip.",
+    why: "Secure Boot stops tampered startup software from loading before Windows. A TPM keeps \
+          encryption keys safe, and BitLocker and Windows Hello can use it.",
+};
+
+fn startup(
+    secure_boot: &Result<SecureBoot, String>,
+    tpm: &Result<Option<String>, String>,
+) -> Finding {
+    if let (Err(first), Err(second)) = (secure_boot, tpm) {
+        return STARTUP.could_not_check(
+            "Open Windows Security and look under Device security.",
+            &format!("{first} {second}"),
+        );
+    }
+
+    let mut details = Vec::new();
+    // What is missing, in the order it is shown.
+    let mut gaps: Vec<&str> = Vec::new();
+    let mut actions: Vec<&str> = Vec::new();
+    let mut unreadable = false;
+
+    match secure_boot {
+        Ok(SecureBoot::On) => details.push(switch("Secure Boot", "On", true)),
+        Ok(SecureBoot::Off) => {
+            details.push(switch("Secure Boot", "Off", false));
+            gaps.push("Secure Boot off");
+            actions.push(
+                "If you did not turn Secure Boot off on purpose, turn it on in your PC's \
+                 firmware (UEFI) settings. Some dual-boot setups need it off.",
+            );
+        }
+        Ok(SecureBoot::LegacyBios) => {
+            details.push(switch(
+                "Secure Boot",
+                "Not available · starts in legacy BIOS mode",
+                false,
+            ));
+            gaps.push("Secure Boot not available");
+            actions.push(
+                "Secure Boot needs UEFI mode. Switching from legacy BIOS means converting the \
+                 disk, so back up first.",
+            );
+        }
+        Err(_) => {
+            details.push(detail("Secure Boot", "Could not read"));
+            unreadable = true;
+        }
+    }
+
+    match tpm {
+        Ok(Some(version)) => {
+            details.push(switch("TPM", format!("Present · version {version}"), true));
+            if version == "1.2" {
+                gaps.push("older TPM");
+                actions.push("TPM 1.2 is older. Windows 11 needs version 2.0.");
+            }
+        }
+        Ok(None) => {
+            details.push(switch("TPM", "Not found", false));
+            gaps.push("no TPM");
+            actions.push(
+                "Without a TPM, Windows cannot keep keys in hardware. Some PCs offer a \
+                 firmware TPM in their settings.",
+            );
+        }
+        Err(_) => {
+            details.push(detail("TPM", "Could not read"));
+            unreadable = true;
+        }
+    }
+
+    let action = (!actions.is_empty()).then(|| actions.join(" "));
+
+    if unreadable {
+        return STARTUP.finding(
+            Status::Limited,
+            "Only part of this could be read",
+            action.or(Some(
+                "Open Windows Security and look under Device security.".to_string(),
+            )),
+            details,
+        );
+    }
+    if gaps.is_empty() {
+        let version = tpm.as_ref().ok().and_then(|found| found.as_deref());
+        return STARTUP.finding(
+            Status::Ok,
+            format!("Secure Boot on · TPM {}", version.unwrap_or("present")),
+            None,
+            details,
+        );
+    }
+
+    // A PC without these is not necessarily at risk, so they are notes and not warnings.
+    let summary = gaps.join(" · ");
+    let summary = format!("{}{}", &summary[..1].to_uppercase(), &summary[1..]);
+    STARTUP.finding(Status::Info, summary, action, details)
+}
+
+// =========================
+// User Account Control
+// =========================
+
+const UAC: Check = Check {
+    id: "uac",
+    title: "User Account Control",
+    checked: "I read whether User Account Control is on and how it asks, and what kind of \
+              account is running Tenax.",
+    why: "User Account Control asks before a program makes changes that need administrator \
+          rights, so malware cannot make them silently.",
+};
+
+fn uac(reading: &Result<Uac, String>) -> Finding {
+    let uac = match reading {
+        Ok(uac) => uac,
+        Err(error) => {
+            return UAC.could_not_check(
+                "Open Settings and search for Change User Account Control settings.",
+                error,
+            );
+        }
+    };
+
+    let account = match uac.account {
+        Account::Standard => "Standard user",
+        Account::Administrator | Account::AdministratorUacOff => "Administrator account",
+        Account::Elevated => "Administrator, running elevated",
+    };
+    let asks = match uac.prompt {
+        0 => "Never asks",
+        1 | 3 => "Asks for a password",
+        2 | 4 => "Always asks",
+        5 => "Asks when programs make changes",
+        _ => "Custom setting",
+    };
+
+    let mut details = vec![switch(
+        "User Account Control",
+        if uac.enabled { "On" } else { "Off" },
+        uac.enabled,
+    )];
+    if uac.enabled {
+        details.push(detail(
+            "When it asks",
+            if uac.secure_desktop {
+                asks.to_string()
+            } else {
+                format!("{asks} · screen not dimmed")
+            },
+        ));
+    }
+    details.push(detail("This account", account));
+
+    let raise = Some(
+        "Open Settings, search for Change User Account Control settings, and move the slider \
+         up from Never notify."
+            .to_string(),
+    );
+
+    if !uac.enabled {
+        return UAC.finding(Status::Warning, "Off", raise, details);
+    }
+    if uac.prompt == 0 {
+        return UAC.finding(Status::Warning, "On · never asks", raise, details);
+    }
+    if uac.account == Account::AdministratorUacOff {
+        return UAC.finding(
+            Status::Warning,
+            "Not applied to this administrator account",
+            raise,
+            details,
+        );
+    }
+    if !uac.secure_desktop {
+        return UAC.finding(
+            Status::Info,
+            "On · does not dim the screen",
+            Some(
+                "Dimming the screen stops other programs from clicking the question for you. \
+                 Open Settings, search for Change User Account Control settings, and choose \
+                 the default level."
+                    .to_string(),
+            ),
+            details,
+        );
+    }
+    if uac.account == Account::Elevated {
+        return UAC.finding(
+            Status::Info,
+            "On · Tenax is running as administrator",
+            Some(
+                "Close Tenax and open it normally. It does not need administrator rights."
+                    .to_string(),
+            ),
+            details,
+        );
+    }
+    UAC.finding(Status::Ok, format!("On · {account}"), None, details)
+}
+
+// =========================
+// Remote access
+// =========================
+
+const REMOTE: Check = Check {
+    id: "remote",
+    title: "Remote access",
+    checked: "I read whether Remote Desktop and Remote Assistance are switched on, whether \
+              anything is listening for Remote Desktop, and whether the Windows Remote \
+              Management and OpenSSH services are running.",
+    why: "Remote access lets someone else control this PC. It is useful when you set it up \
+          yourself, and a way in when you did not.",
+};
+
+fn service_text(state: ServiceState) -> &'static str {
+    match state {
+        ServiceState::Running => "Running",
+        ServiceState::Stopped => "Stopped",
+        ServiceState::NotInstalled => "Not installed",
+    }
+}
+
+fn remote_access(reading: &Result<RemoteAccess, String>) -> Finding {
+    let remote = match reading {
+        Ok(remote) => remote,
+        Err(error) => {
+            return REMOTE
+                .could_not_check("Open Settings, choose System, then Remote Desktop.", error);
+        }
+    };
+    let desktop = &remote.desktop;
+
+    // A listener counts as on whatever the setting says, since a policy can turn it on elsewhere.
+    let desktop_text = match (desktop.enabled, desktop.listening) {
+        (_, true) => format!("On · listening on port {}", desktop.port),
+        (true, false) => "Allowed · nothing is listening".to_string(),
+        (false, false) => "Off".to_string(),
+    };
+    let mut details = vec![switch(
+        "Remote Desktop",
+        desktop_text,
+        desktop.enabled || desktop.listening,
+    )];
+    if desktop.enabled || desktop.listening {
+        details.push(
+            detail(
+                "Network Level Authentication",
+                if desktop.nla { "On" } else { "Off" },
+            )
+            .because(
+                "With it on, a person has to sign in before a session starts, which stops \
+                 many attacks that rely on reaching the sign-in screen.",
+            ),
+        );
+    }
+    details.extend([
+        switch(
+            "Remote Assistance",
+            if remote.assistance { "On" } else { "Off" },
+            remote.assistance,
+        ),
+        switch(
+            "Windows Remote Management",
+            service_text(remote.winrm),
+            remote.winrm == ServiceState::Running,
+        ),
+        switch(
+            "OpenSSH server",
+            service_text(remote.ssh),
+            remote.ssh == ServiceState::Running,
+        ),
+    ]);
+
+    let mut on: Vec<&str> = Vec::new();
+    if desktop.listening {
+        on.push("Remote Desktop");
+    }
+    if remote.winrm == ServiceState::Running {
+        on.push("Windows Remote Management");
+    }
+    if remote.ssh == ServiceState::Running {
+        on.push("OpenSSH server");
+    }
+
+    let turn_off = "If you do not use it, turn it off. For Remote Desktop, open Settings, \
+                    choose System, then Remote Desktop.";
+    let mut finding = if desktop.listening && !desktop.nla {
+        REMOTE.finding(
+            Status::Warning,
+            "Remote Desktop on · Network Level Authentication off",
+            Some(
+                "Open Settings, choose System, then Remote Desktop, and turn on Require \
+                 devices to use Network Level Authentication. Turn Remote Desktop off if you \
+                 do not use it."
+                    .to_string(),
+            ),
+            details,
+        )
+    } else if !on.is_empty() {
+        REMOTE.finding(
+            Status::Info,
+            format!("On · {}", join_names(&on, "and")),
+            Some(turn_off.to_string()),
+            details,
+        )
+    } else if desktop.enabled {
+        REMOTE.finding(
+            Status::Info,
+            "Remote Desktop allowed · nothing is listening",
+            Some(
+                "The setting is on, but Windows is not accepting connections. That is normal \
+                 on Windows Home, which cannot host Remote Desktop."
+                    .to_string(),
+            ),
+            details,
+        )
+    } else {
+        REMOTE.finding(
+            Status::Ok,
+            if remote.assistance {
+                "Remote Assistance allowed"
+            } else {
+                "Off"
+            },
+            None,
+            details,
+        )
+    };
+
+    if !on.is_empty() {
+        finding.note = Some(
+            "Tenax only sees this PC. It cannot tell whether your router lets the internet \
+             reach it."
+                .to_string(),
+        );
+    }
+    finding
+}
+
+// =========================
+// Automatic sign-in
+// =========================
+
+const SIGN_IN: Check = Check {
+    id: "signin",
+    title: "Automatic sign-in",
+    checked: "I read whether Windows is set to sign in without asking for a password. I did \
+              not read any saved password.",
+    why: "With automatic sign-in, anyone who turns this PC on gets into your account and \
+          files.",
+};
+
+fn sign_in(reading: &Result<bool, String>) -> Finding {
+    match reading {
+        Err(error) => SIGN_IN.could_not_check(
+            "Press Windows + R, type netplwiz and look at the sign-in setting there.",
+            error,
+        ),
+        Ok(true) => SIGN_IN.finding(
+            Status::Warning,
+            "On · no password at start-up",
+            Some(
+                "Press Windows + R, type netplwiz, select your account and tick Users must \
+                 enter a user name and password to use this computer."
+                    .to_string(),
+            ),
+            vec![switch("Automatic sign-in", "On", true)],
+        ),
+        Ok(false) => SIGN_IN.finding(
+            Status::Ok,
+            "Off",
+            None,
+            vec![switch("Automatic sign-in", "Off", false)],
+        ),
+    }
+}
+
+// =========================
 // Tests
 // =========================
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::windows_security::RemoteDesktop;
 
     fn product(name: &str, state: ProductState) -> SecurityProduct {
         SecurityProduct {
@@ -416,6 +813,11 @@ mod tests {
                 restart_pending: false,
                 windows_version: None,
             }),
+            secure_boot: Ok(SecureBoot::On),
+            tpm: Ok(Some("2.0".to_string())),
+            uac: Ok(uac_with(5, true, Account::Administrator)),
+            remote_access: Ok(remote_off()),
+            auto_sign_in: Ok(false),
         }
     }
 
@@ -438,7 +840,7 @@ mod tests {
     #[test]
     fn healthy_pc_has_no_issues() {
         let findings = build(&healthy());
-        assert_eq!(findings.len(), 3);
+        assert_eq!(findings.len(), 7);
         assert!(findings.iter().all(|finding| finding.status == Status::Ok));
         assert!(findings.iter().all(|finding| finding.action.is_none()));
     }
@@ -610,6 +1012,11 @@ mod tests {
             firewall: Err("Access is denied.".to_string()),
             other_firewalls: Err("Access is denied.".to_string()),
             updates: Err("Access is denied.".to_string()),
+            secure_boot: Err("Access is denied.".to_string()),
+            tpm: Err("Access is denied.".to_string()),
+            uac: Err("Access is denied.".to_string()),
+            remote_access: Err("Access is denied.".to_string()),
+            auto_sign_in: Err("Access is denied.".to_string()),
         };
         let findings = build(&readings);
         assert!(
@@ -640,7 +1047,221 @@ mod tests {
         });
         let findings = build(&readings);
         let order: Vec<Status> = findings.iter().map(|finding| finding.status).collect();
-        assert_eq!(order, vec![Status::Risk, Status::Warning, Status::Ok]);
+        assert_eq!(
+            order,
+            vec![
+                Status::Risk,
+                Status::Warning,
+                Status::Ok,
+                Status::Ok,
+                Status::Ok,
+                Status::Ok,
+                Status::Ok
+            ]
+        );
+    }
+
+    fn uac_with(prompt: u32, secure_desktop: bool, account: Account) -> Uac {
+        Uac {
+            enabled: true,
+            prompt,
+            secure_desktop,
+            account,
+        }
+    }
+
+    fn remote_off() -> RemoteAccess {
+        RemoteAccess {
+            desktop: RemoteDesktop {
+                enabled: false,
+                nla: true,
+                port: 3389,
+                listening: false,
+            },
+            assistance: false,
+            winrm: ServiceState::NotInstalled,
+            ssh: ServiceState::NotInstalled,
+        }
+    }
+
+    fn remote_desktop(enabled: bool, listening: bool, nla: bool) -> RemoteAccess {
+        RemoteAccess {
+            desktop: RemoteDesktop {
+                enabled,
+                nla,
+                port: 3389,
+                listening,
+            },
+            ..remote_off()
+        }
+    }
+
+    fn unreadable() -> String {
+        "Access is denied.".to_string()
+    }
+
+    #[test]
+    fn secure_boot_off_or_unavailable_is_a_note() {
+        let off = startup(&Ok(SecureBoot::Off), &Ok(Some("2.0".to_string())));
+        assert_eq!(off.status, Status::Info);
+        assert!(off.summary.starts_with("Secure Boot off"));
+
+        let legacy = startup(&Ok(SecureBoot::LegacyBios), &Ok(Some("2.0".to_string())));
+        assert_eq!(legacy.status, Status::Info);
+        assert!(legacy.action.unwrap().contains("UEFI"));
+    }
+
+    #[test]
+    fn missing_or_old_tpm_is_a_note() {
+        let none = startup(&Ok(SecureBoot::On), &Ok(None));
+        assert_eq!(none.status, Status::Info);
+        assert_eq!(none.summary, "No TPM");
+
+        let old = startup(&Ok(SecureBoot::On), &Ok(Some("1.2".to_string())));
+        assert_eq!(old.status, Status::Info);
+    }
+
+    #[test]
+    fn startup_protection_says_what_it_found_when_all_is_well() {
+        let finding = startup(&Ok(SecureBoot::On), &Ok(Some("2.0".to_string())));
+        assert_eq!(finding.status, Status::Ok);
+        assert_eq!(finding.summary, "Secure Boot on · TPM 2.0");
+    }
+
+    #[test]
+    fn startup_protection_is_limited_when_only_one_part_could_be_read() {
+        let finding = startup(&Err(unreadable()), &Ok(Some("2.0".to_string())));
+        assert_eq!(finding.status, Status::Limited);
+
+        let both = startup(&Err(unreadable()), &Err(unreadable()));
+        assert_eq!(both.status, Status::Unknown);
+    }
+
+    #[test]
+    fn uac_off_or_never_asking_is_a_warning() {
+        let off = Uac {
+            enabled: false,
+            ..uac_with(5, true, Account::Administrator)
+        };
+        assert_eq!(uac(&Ok(off)).status, Status::Warning);
+        assert_eq!(
+            uac(&Ok(uac_with(0, true, Account::Administrator))).status,
+            Status::Warning
+        );
+    }
+
+    #[test]
+    fn an_administrator_without_the_split_is_a_warning_even_if_the_screen_is_not_dimmed() {
+        let finding = uac(&Ok(uac_with(5, false, Account::AdministratorUacOff)));
+        assert_eq!(finding.status, Status::Warning);
+    }
+
+    #[test]
+    fn uac_that_does_not_dim_the_screen_is_a_note() {
+        let finding = uac(&Ok(uac_with(5, false, Account::Administrator)));
+        assert_eq!(finding.status, Status::Info);
+    }
+
+    #[test]
+    fn running_tenax_as_administrator_is_a_note() {
+        let finding = uac(&Ok(uac_with(5, true, Account::Elevated)));
+        assert_eq!(finding.status, Status::Info);
+        assert!(
+            finding
+                .action
+                .unwrap()
+                .contains("does not need administrator")
+        );
+    }
+
+    #[test]
+    fn uac_on_with_default_settings_is_fine_for_either_account() {
+        for account in [Account::Standard, Account::Administrator] {
+            assert_eq!(uac(&Ok(uac_with(5, true, account))).status, Status::Ok);
+        }
+    }
+
+    #[test]
+    fn remote_desktop_without_network_level_authentication_is_a_warning() {
+        let finding = remote_access(&Ok(remote_desktop(true, true, false)));
+        assert_eq!(finding.status, Status::Warning);
+        assert!(finding.note.is_some());
+    }
+
+    #[test]
+    fn a_listener_counts_even_when_the_setting_says_off() {
+        // A Group Policy can allow Remote Desktop without the setting changing.
+        let finding = remote_access(&Ok(remote_desktop(false, true, true)));
+        assert_eq!(finding.status, Status::Info);
+        assert_eq!(finding.summary, "On · Remote Desktop");
+        let weak = remote_access(&Ok(remote_desktop(false, true, false)));
+        assert_eq!(weak.status, Status::Warning);
+    }
+
+    #[test]
+    fn remote_desktop_that_is_listening_is_a_note() {
+        let finding = remote_access(&Ok(remote_desktop(true, true, true)));
+        assert_eq!(finding.status, Status::Info);
+        assert_eq!(finding.summary, "On · Remote Desktop");
+    }
+
+    #[test]
+    fn remote_desktop_allowed_but_not_listening_is_a_note() {
+        let finding = remote_access(&Ok(remote_desktop(true, false, true)));
+        assert_eq!(finding.status, Status::Info);
+        assert!(finding.note.is_none());
+    }
+
+    #[test]
+    fn running_remote_services_are_a_note() {
+        let remote = RemoteAccess {
+            winrm: ServiceState::Running,
+            ssh: ServiceState::Running,
+            ..remote_off()
+        };
+        let finding = remote_access(&Ok(remote));
+        assert_eq!(finding.status, Status::Info);
+        assert_eq!(
+            finding.summary,
+            "On · Windows Remote Management and OpenSSH server"
+        );
+    }
+
+    #[test]
+    fn a_stopped_or_missing_remote_service_is_not_a_problem() {
+        let remote = RemoteAccess {
+            winrm: ServiceState::Stopped,
+            ..remote_off()
+        };
+        assert_eq!(remote_access(&Ok(remote)).status, Status::Ok);
+        assert_eq!(remote_access(&Ok(remote_off())).status, Status::Ok);
+    }
+
+    #[test]
+    fn automatic_sign_in_is_a_warning_only_when_it_is_on() {
+        assert_eq!(sign_in(&Ok(true)).status, Status::Warning);
+        assert_eq!(sign_in(&Ok(false)).status, Status::Ok);
+        assert_eq!(sign_in(&Err(unreadable())).status, Status::Unknown);
+    }
+
+    #[test]
+    fn every_step_belongs_to_a_finding_that_exists() {
+        // The step ids the reader uses must match finding ids, or the activity log loses the step.
+        let ids: Vec<String> = build(&healthy())
+            .into_iter()
+            .map(|finding| finding.id)
+            .collect();
+        for step_id in [
+            "antivirus",
+            "firewall",
+            "updates",
+            "startup",
+            "uac",
+            "remote",
+            "signin",
+        ] {
+            assert!(ids.iter().any(|id| id == step_id), "{step_id}");
+        }
     }
 
     // Reads this PC's real settings. Run with: cargo test -- --ignored --nocapture
@@ -648,7 +1269,22 @@ mod tests {
     #[test]
     #[ignore]
     fn print_real_findings() {
-        for finding in build(&super::super::reader::read().0) {
+        let readings = super::super::reader::read().0;
+        println!("secure_boot: {:?}", readings.secure_boot);
+        println!("tpm: {:?}", readings.tpm);
+        println!("uac: {:?}", readings.uac);
+        println!("remote_access: {:?}", readings.remote_access);
+        println!("auto_sign_in: {:?}", readings.auto_sign_in);
+        // Ports 135 and 445 normally listen on Windows, so seeing them shows the table is read correctly.
+        println!(
+            "listening v4: {:?}",
+            super::super::reader::listening_ports(2)
+        );
+        println!(
+            "listening v6: {:?}",
+            super::super::reader::listening_ports(23)
+        );
+        for finding in build(&readings) {
             println!(
                 "{:?} | {} | {}",
                 finding.status, finding.title, finding.summary

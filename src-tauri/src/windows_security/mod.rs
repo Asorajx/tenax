@@ -42,6 +42,62 @@ pub struct UpdateStatus {
     pub windows_version: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SecureBoot {
+    On,
+    Off,
+    // The PC starts with the old BIOS, which has no Secure Boot at all.
+    LegacyBios,
+}
+
+// Who is running Tenax, as the token Windows gave this process describes it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Account {
+    Standard,
+    // An administrator account running without elevation, which is how Windows normally runs one.
+    Administrator,
+    // Tenax itself was started as administrator.
+    Elevated,
+    // An administrator account while User Account Control is off, so there is no split.
+    AdministratorUacOff,
+}
+
+#[derive(Debug)]
+pub struct Uac {
+    pub enabled: bool,
+    // ConsentPromptBehaviorAdmin: 0 never asks, 2 always asks, 5 is the default.
+    pub prompt: u32,
+    // Whether the screen is dimmed while the question is shown.
+    pub secure_desktop: bool,
+    pub account: Account,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ServiceState {
+    NotInstalled,
+    Stopped,
+    Running,
+}
+
+#[derive(Debug)]
+pub struct RemoteDesktop {
+    // The Windows setting that allows connections.
+    pub enabled: bool,
+    // Whether a connection must sign in before the session starts (Network Level Authentication).
+    pub nla: bool,
+    pub port: u16,
+    // Whether something is actually accepting connections on that port right now.
+    pub listening: bool,
+}
+
+#[derive(Debug)]
+pub struct RemoteAccess {
+    pub desktop: RemoteDesktop,
+    pub assistance: bool,
+    pub winrm: ServiceState,
+    pub ssh: ServiceState,
+}
+
 // Each check can fail on its own, so one failure does not hide the others.
 pub struct Readings {
     pub antivirus: Result<Vec<SecurityProduct>, String>,
@@ -49,6 +105,12 @@ pub struct Readings {
     // Firewalls from other products, such as a security suite.
     pub other_firewalls: Result<Vec<SecurityProduct>, String>,
     pub updates: Result<UpdateStatus, String>,
+    pub secure_boot: Result<SecureBoot, String>,
+    // None means no TPM was found. Otherwise the version, such as "2.0".
+    pub tpm: Result<Option<String>, String>,
+    pub uac: Result<Uac, String>,
+    pub remote_access: Result<RemoteAccess, String>,
+    pub auto_sign_in: Result<bool, String>,
 }
 
 // Called from the interface with invoke("check_windows_security").

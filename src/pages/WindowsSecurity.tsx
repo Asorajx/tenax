@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDeviceCheck } from "../app/deviceCheck";
 import type { Tool } from "../app/tools";
 import ActivityLog from "../components/ActivityLog";
@@ -15,12 +15,32 @@ const FILL_FINISH_MS = 180;
 /* "finishing" is the brief moment between the results arriving and being shown. */
 type CheckState = "idle" | "loading" | "finishing" | "done" | "error";
 
-export default function WindowsSecurity({ tool }: { tool: Tool }) {
+interface WindowsSecurityProps {
+  tool: Tool;
+  /* A card to scroll to, sent from the Home screen. */
+  focus: string | null;
+  onFocused: () => void;
+}
+
+export default function WindowsSecurity({ tool, focus, onFocused }: WindowsSecurityProps) {
   /* The result is shared with the Home screen, so it is read once and shown in both. If it was already */
   /* read there, this page opens straight onto it. */
   const { phase, findings, seconds, error, run } = useDeviceCheck();
   const [finishing, setFinishing] = useState(false);
   const state: CheckState = phase === "done" && finishing ? "finishing" : phase;
+
+  /* Scrolls to the card the Home screen asked for, as soon as the results are showing. */
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!focus || state !== "done") return;
+    /* Waits a frame, because the window returns a newly shown page to the top once it has rendered. */
+    const frame = requestAnimationFrame(() => {
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      list.current?.querySelector(`[data-finding="${focus}"]`)?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+      onFocused();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focus, state, onFocused]);
 
   /* Reads the settings, then lets the icon fill the rest of the way before the results are shown. */
   async function runCheck() {
@@ -31,7 +51,7 @@ export default function WindowsSecurity({ tool }: { tool: Tool }) {
 
   /* The one-line result shown above the findings. It only speaks for the checks that ran. */
   const issues = findings.filter((finding) => finding.status === "risk" || finding.status === "warning");
-  const failed = findings.filter((finding) => finding.status === "unknown");
+  const failed = findings.filter((finding) => finding.status === "unknown" || finding.status === "limited");
   let verdict = { status: "ok", text: "No issues found." };
   if (issues.length > 0) {
     verdict = {
@@ -41,7 +61,7 @@ export default function WindowsSecurity({ tool }: { tool: Tool }) {
   } else if (failed.length > 0) {
     verdict = {
       status: "unknown",
-      text: failed.length === 1 ? "1 check could not run." : `${failed.length} checks could not run.`,
+      text: failed.length === 1 ? "1 check could not be fully read." : `${failed.length} checks could not be fully read.`,
     };
   }
 
@@ -92,7 +112,7 @@ export default function WindowsSecurity({ tool }: { tool: Tool }) {
           <p className="verdict" data-status={verdict.status}>
             {verdict.text}
           </p>
-          <div className="findings">
+          <div className="findings" ref={list}>
             {findings.map((finding) => (
               <FindingCard key={finding.id} finding={finding} />
             ))}
