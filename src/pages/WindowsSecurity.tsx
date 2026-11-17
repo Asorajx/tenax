@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useDeviceCheck } from "../app/deviceCheck";
 import type { Tool } from "../app/tools";
 import ActivityLog from "../components/ActivityLog";
-import FindingCard from "../components/Finding";
+import FindingCard, { type Finding, type FindingLink } from "../components/Finding";
+import { deviceStatus } from "../components/floating/DeviceRing";
 import ToolPage from "../components/ToolPage";
 
 /* =========================
@@ -11,6 +13,33 @@ import ToolPage from "../components/ToolPage";
 
 /* How long the icon takes to finish filling once the results are in. */
 const FILL_FINISH_MS = 180;
+
+/* The page of Windows Settings, or of the Windows Security app, that each check's "What to do" sends */
+/* people to. It must match the pages in src-tauri/src/windows_security/settings.rs. */
+const SETTINGS_PAGES: Record<string, string> = {
+  antivirus: "virus-protection",
+  firewall: "firewall",
+  updates: "windows-update",
+  startup: "device-security",
+  uac: "settings",
+  remote: "remote-desktop",
+  encryption: "privacy",
+};
+
+/* When a card says "Open Settings" or "Open Windows Security", those words open that page. Opening */
+/* it changes nothing, and a card whose text does not say it has no link. */
+function settingsLink(finding: Finding): FindingLink | undefined {
+  const page = SETTINGS_PAGES[finding.id];
+  const text = ["Open Windows Security", "Open Settings"].find((phrase) => finding.action?.includes(phrase));
+  if (!page || !text) return undefined;
+  return {
+    text,
+    /* If the page cannot be opened, nothing happens, and the text still says where to go. */
+    onClick: () => {
+      invoke("open_settings", { page }).catch(() => {});
+    },
+  };
+}
 
 /* "finishing" is the brief moment between the results arriving and being shown. */
 type CheckState = "idle" | "loading" | "finishing" | "done" | "error";
@@ -49,20 +78,22 @@ export default function WindowsSecurity({ tool, focus, onFocused }: WindowsSecur
     window.setTimeout(() => setFinishing(false), FILL_FINISH_MS);
   }
 
-  /* The one-line result shown above the findings. It only speaks for the checks that ran. */
-  const issues = findings.filter((finding) => finding.status === "risk" || finding.status === "warning");
-  const failed = findings.filter((finding) => finding.status === "unknown" || finding.status === "limited");
-  let verdict = { status: "ok", text: "No issues found." };
-  if (issues.length > 0) {
-    verdict = {
-      status: issues.some((finding) => finding.status === "risk") ? "risk" : "warning",
-      text: issues.length === 1 ? "1 issue needs attention." : `${issues.length} issues need attention.`,
-    };
-  } else if (failed.length > 0) {
-    verdict = {
-      status: "unknown",
-      text: failed.length === 1 ? "1 check could not be fully read." : `${failed.length} checks could not be fully read.`,
-    };
+  /* The one-line result shown above the findings. It says the same as the Home screen, from the same */
+  /* function: warnings first, then anything that could not be read. */
+  const summary = deviceStatus(findings);
+  const unread = summary.unavailable === 1 ? "1 check could not be fully read." : `${summary.unavailable} checks could not be fully read.`;
+  let verdict: { status: string; text: string };
+  if (summary.kind === "attention") {
+    const issues = summary.attention === 1 ? "1 issue needs attention." : `${summary.attention} issues need attention.`;
+    verdict = { status: summary.status, text: summary.unavailable > 0 ? `${issues} ${unread}` : issues };
+  } else if (summary.kind === "unreadable") {
+    verdict = { status: "unknown", text: "Nothing could be read." };
+  } else if (summary.kind === "incomplete") {
+    verdict = { status: "unknown", text: `Incomplete. ${unread}` };
+  } else if (summary.unavailable > 0) {
+    verdict = { status: "unknown", text: `No warnings detected. ${unread}` };
+  } else {
+    verdict = { status: "ok", text: "No warnings detected." };
   }
 
   const info = (
@@ -114,11 +145,12 @@ export default function WindowsSecurity({ tool, focus, onFocused }: WindowsSecur
           </p>
           <div className="findings" ref={list}>
             {findings.map((finding) => (
-              <FindingCard key={finding.id} finding={finding} />
+              <FindingCard key={finding.id} finding={finding} link={settingsLink(finding)} />
             ))}
           </div>
           <ActivityLog
             title="Windows Security"
+            recentStatus={summary.status}
             findings={findings}
             seconds={seconds}
             footer="Read-only check · No settings changed"

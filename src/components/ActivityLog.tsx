@@ -1,7 +1,7 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { Check, ChevronDown, Copy, SquareTerminal } from "lucide-react";
 import { useRecent, worstStatus } from "../app/recent";
-import type { Finding, Step } from "./Finding";
+import type { Finding, FindingStatus, Step } from "./Finding";
 
 /* =========================
    Activity Log
@@ -16,6 +16,9 @@ interface ActivityLogProps {
   footer: string;
   /* An overall result, put at the top of the copied log. */
   result?: string;
+  /* The colour of this tool in the Home screen's Recent list, when it should not simply be the worst */
+  /* of the findings. */
+  recentStatus?: FindingStatus;
 }
 
 /* The chosen tab is remembered for future scans. Basic is the default. */
@@ -63,12 +66,12 @@ function buildLog(title: string, findings: Finding[], seconds: number, result?: 
 }
 
 /* A collapsed terminal-style record of what Tenax did. Technical details open per step. */
-export default function ActivityLog({ title, findings, seconds, footer, result }: ActivityLogProps) {
+export default function ActivityLog({ title, findings, seconds, footer, result, recentStatus }: ActivityLogProps) {
   const [copied, setCopied] = useState(false);
 
   /* A log only appears with a result, so this is the moment to note it for the Home screen. */
   const { record } = useRecent();
-  const status = worstStatus(findings.map((finding) => finding.status));
+  const status = recentStatus ?? worstStatus(findings.map((finding) => finding.status));
   useEffect(() => {
     record({ title, headline: result, status });
   }, [record, title, result, status]);

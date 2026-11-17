@@ -335,13 +335,14 @@ mod tests {
     }
 
     // The commands the interface can call that never go online.
-    const OFFLINE_COMMANDS: [&str; 7] = [
+    const OFFLINE_COMMANDS: [&str; 8] = [
         "analyse_email_headers",
         "check_email_scam",
         "check_url",
         "check_windows_security",
         "inspect_ip",
         "network_access",
+        "open_settings",
         "set_network_access",
     ];
 

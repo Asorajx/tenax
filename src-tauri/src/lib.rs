@@ -39,7 +39,8 @@ pub fn run() {
             network::network_access,
             network::set_network_access,
             url_check::check_url,
-            windows_security::check_windows_security
+            windows_security::check_windows_security,
+            windows_security::settings::open_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

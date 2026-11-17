@@ -4,7 +4,7 @@ import { useDeviceCheck } from "../app/deviceCheck";
 import { ALL_TOOLS } from "../app/tools";
 import { useRecent } from "../app/recent";
 import { WORKSPACES } from "../app/workspaces";
-import DeviceRing, { extraChecks, statusWord } from "../components/floating/DeviceRing";
+import DeviceRing, { deviceStatus, extraChecks, statusWord } from "../components/floating/DeviceRing";
 
 /* =========================
    Home (Minimal)
@@ -45,6 +45,9 @@ export default function HomeMinimal({
 
   /* The checks that have no segment on the ring, which the line in the middle also counts. */
   const extra = extraChecks(phase, findings);
+
+  /* How many checks could not be read. It is shown quietly, apart from the headline. */
+  const unavailable = phase === "done" ? deviceStatus(findings).unavailable : 0;
 
   return (
     <div className="home">
@@ -105,6 +108,7 @@ export default function HomeMinimal({
             ) : (
               <>
                 Checked at {time} ·{" "}
+                {unavailable > 0 && <>{unavailable} unavailable ·{" "}</>}
                 <button type="button" className="button-link" onClick={() => onOpen("device")}>
                   Details
                 </button>

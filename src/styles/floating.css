@@ -566,7 +566,7 @@
 
 .home-device-note {
   min-height: 1.5em;
-  max-width: 30ch;
+  max-width: 44ch;
   color: var(--text-muted);
   font-size: var(--text-sm);
 }

@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Finding } from "../components/Finding";
-import { ringSummary } from "../components/floating/DeviceRing";
-import { useRecent, worstStatus } from "./recent";
+import { deviceStatus } from "../components/floating/DeviceRing";
+import { useRecent } from "./recent";
 
 /* =========================
    Device Check
@@ -55,11 +55,8 @@ export function DeviceCheckProvider({ children }: { children: ReactNode }) {
       setSeconds((performance.now() - started) / 1000);
       setCheckedAt(new Date());
       setPhase("done");
-      record({
-        title: "Windows Security",
-        headline: ringSummary("done", result).title,
-        status: worstStatus(result.map((finding) => finding.status)),
-      });
+      const summary = deviceStatus(result);
+      record({ title: "Windows Security", headline: summary.title, status: summary.status });
     } catch (reason) {
       setError(String(reason));
       setPhase("error");

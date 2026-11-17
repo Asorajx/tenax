@@ -1,5 +1,5 @@
 import type { DevicePhase } from "../../app/deviceCheck";
-import type { Finding } from "../Finding";
+import type { Finding, FindingStatus } from "../Finding";
 
 /* =========================
    Device Ring
@@ -31,28 +31,67 @@ export function statusWord(status: string) {
   }
 }
 
-/* The one line in the middle. It speaks for every check the tool made, not only the three on the ring, */
-/* and never says the PC is safe. */
-export function ringSummary(phase: DevicePhase, findings: Finding[]) {
+/* A check that could not be read: it failed, or it only partly ran. */
+function unreadable(status: string) {
+  return status === "unknown" || status === "limited";
+}
+
+type DeviceKind = "attention" | "unreadable" | "incomplete" | "notes" | "clear";
+
+/* What the Windows Security results add up to. Whether there are warnings is kept apart from whether */
+/* everything could be read, and warnings always come first. The Home line, the Recent dot and the */
+/* page's own sentence all use this, so they cannot disagree. It never says the PC is safe. */
+/*   attention    a warning or a risk                          */
+/*   unreadable   nothing could be read                        */
+/*   incomplete   one of the three ring checks could not be read, so the line cannot say "no warnings" */
+/*   notes        no warnings, but something is worth a look   */
+/*   clear        no warnings, though other checks may be unavailable */
+export function deviceStatus(findings: Finding[]) {
+  const attention = findings.filter((finding) => finding.status === "warning" || finding.status === "risk");
+  const found = (id: string) => findings.find((finding) => finding.id === id);
+  /* A ring check that is missing counts as not read. */
+  const missing = DEVICE_CHECKS.filter((check) => !found(check.id)).length;
+  const coreUnread = DEVICE_CHECKS.some((check) => {
+    const finding = found(check.id);
+    return !finding || unreadable(finding.status);
+  });
+  const unavailable = findings.filter((finding) => unreadable(finding.status)).length + missing;
+  const readable = findings.filter((finding) => !unreadable(finding.status)).length;
+
+  let kind: DeviceKind;
+  let title: string;
+  let status: FindingStatus;
+  if (attention.length > 0) {
+    kind = "attention";
+    title = "Needs attention";
+    status = attention.some((finding) => finding.status === "risk") ? "risk" : "warning";
+  } else if (readable === 0) {
+    kind = "unreadable";
+    title = "Could not be read";
+    status = "limited";
+  } else if (coreUnread) {
+    kind = "incomplete";
+    title = "Incomplete";
+    status = "limited";
+  } else if (findings.some((finding) => finding.status === "info")) {
+    kind = "notes";
+    title = "Worth a look";
+    status = "info";
+  } else {
+    kind = "clear";
+    title = "No warnings detected";
+    /* Grey, not green, when something could not be read, so it never looks fully verified. */
+    status = unavailable > 0 ? "limited" : "ok";
+  }
+  return { kind, title, status, attention: attention.length, unavailable };
+}
+
+/* The one line in the middle. It speaks for every check the tool made, not only the three on the ring. */
+function ringSummary(phase: DevicePhase, findings: Finding[]) {
   if (phase === "loading") return { title: "Checking" };
   if (phase === "error") return { title: "Could not check" };
   if (phase !== "done") return { title: "Not checked" };
-
-  /* A missing ring check counts as not read, so the line cannot be cleaner than the ring. */
-  const statuses = [
-    ...findings.map((finding) => finding.status),
-    ...DEVICE_CHECKS.filter((check) => !findings.some((finding) => finding.id === check.id)).map(() => undefined),
-  ];
-  if (statuses.some((status) => status === "warning" || status === "risk")) {
-    return { title: "Needs attention" };
-  }
-  if (statuses.some((status) => status === undefined || status === "unknown" || status === "limited")) {
-    return { title: "Incomplete" };
-  }
-  if (statuses.some((status) => status === "info")) {
-    return { title: "Worth a look" };
-  }
-  return { title: "Nothing flagged" };
+  return { title: deviceStatus(findings).title };
 }
 
 /* The findings that have no segment on the ring. The Home screen lists them beside the ring. They are */
@@ -74,6 +113,17 @@ function arc(from: number, to: number, radius: number) {
   return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius} ${radius} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
 }
 
+/* A long title is split over two lines, at the space nearest its middle, so it stays inside the ring. */
+function titleLines(title: string) {
+  if (title.length <= 16) return [title];
+  const middle = title.length / 2;
+  let cut = -1;
+  for (let at = title.indexOf(" "); at !== -1; at = title.indexOf(" ", at + 1)) {
+    if (cut === -1 || Math.abs(at - middle) < Math.abs(cut - middle)) cut = at;
+  }
+  return cut === -1 ? [title] : [title.slice(0, cut), title.slice(cut + 1)];
+}
+
 interface DeviceRingProps {
   phase: DevicePhase;
   findings: Finding[];
@@ -87,6 +137,9 @@ export default function DeviceRing({ phase, findings }: DeviceRingProps) {
   const statusOf = (id: string) => (phase === "done" ? (findings.find((finding) => finding.id === id)?.status ?? "none") : "none");
 
   const description = DEVICE_CHECKS.map((check) => `${check.label} ${statusWord(statusOf(check.id))}`).join(", ");
+  const lines = titleLines(summary.title);
+  const unavailable = phase === "done" ? deviceStatus(findings).unavailable : 0;
+  const unavailableText = unavailable > 0 ? ` ${unavailable} ${unavailable === 1 ? "check" : "checks"} unavailable.` : "";
 
   return (
     <svg
@@ -94,7 +147,7 @@ export default function DeviceRing({ phase, findings }: DeviceRingProps) {
       viewBox="0 0 280 220"
       data-phase={phase}
       role="img"
-      aria-label={`Device security. ${summary.title}. ${description}.`}
+      aria-label={`Device security. ${summary.title}. ${description}.${unavailableText}`}
     >
       {DEVICE_CHECKS.map((check, index) => (
         <path
@@ -118,8 +171,12 @@ export default function DeviceRing({ phase, findings }: DeviceRingProps) {
         );
       })}
 
-      <text key={summary.title} className="ring-title" x="140" y="108" textAnchor="middle">
-        {summary.title}
+      <text key={summary.title} className="ring-title" x="140" y={lines.length > 1 ? 94 : 108} textAnchor="middle">
+        {lines.map((line, index) => (
+          <tspan key={line} x="140" dy={index === 0 ? 0 : 18}>
+            {line}
+          </tspan>
+        ))}
       </text>
     </svg>
   );

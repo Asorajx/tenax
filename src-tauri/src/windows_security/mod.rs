@@ -1,12 +1,15 @@
-// Windows Security check: reads antivirus, firewall and Windows Update settings.
+// Windows Security check: reads antivirus, firewall, Windows Update, Secure Boot, TPM, drive
+// encryption, User Account Control, remote access and automatic sign-in settings.
 // Nothing is changed on the PC.
 //
 // reader.rs   talks to Windows and returns raw values
 // findings.rs turns those values into findings, with no Windows code in it
+// settings.rs opens a page of Windows Settings, from a fixed list of pages
 
 mod findings;
 #[cfg(windows)]
 mod reader;
+pub(crate) mod settings;
 
 use crate::finding::Finding;
 

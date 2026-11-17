@@ -278,44 +278,13 @@ fn updates() -> Result<UpdateStatus> {
 fn windows_version() -> Option<String> {
     const KEY: PCWSTR = w!(r"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
 
-    fn text(name: PCWSTR) -> Option<String> {
-        let mut buffer = [0u16; 64];
-        let mut size = std::mem::size_of_val(&buffer) as u32;
-        unsafe {
-            RegGetValueW(
-                HKEY_LOCAL_MACHINE,
-                KEY,
-                name,
-                RRF_RT_REG_SZ,
-                None,
-                Some(buffer.as_mut_ptr().cast()),
-                Some(&mut size),
-            )
-        }
-        .ok()
-        .ok()?;
-        let length = buffer.iter().position(|&unit| unit == 0)?;
-        Some(String::from_utf16_lossy(&buffer[..length]))
-    }
-
-    fn number(name: PCWSTR) -> Option<u32> {
-        let mut value = 0u32;
-        let mut size = std::mem::size_of::<u32>() as u32;
-        unsafe {
-            RegGetValueW(
-                HKEY_LOCAL_MACHINE,
-                KEY,
-                name,
-                RRF_RT_REG_DWORD,
-                None,
-                Some((&mut value as *mut u32).cast()),
-                Some(&mut size),
-            )
-        }
-        .ok()
-        .ok()?;
-        Some(value)
-    }
+    // A value that cannot be read is simply left out of the version text.
+    let text = |name: PCWSTR| registry_text(HKEY_LOCAL_MACHINE, KEY, name).ok().flatten();
+    let number = |name: PCWSTR| {
+        registry_number(HKEY_LOCAL_MACHINE, KEY, name)
+            .ok()
+            .flatten()
+    };
 
     let build: u32 = text(w!("CurrentBuild"))?.parse().ok()?;
     let name = if build >= 22000 {
