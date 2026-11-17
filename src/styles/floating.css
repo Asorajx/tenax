@@ -415,23 +415,34 @@
    ========================= */
 
 .home {
+  /* The ring grows a little in a large window, between 380px and 480px. */
+  --ring-size: clamp(380px, 22vw, 480px);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  max-width: 920px;
+  /* Home keeps to a comfortable width and sits in the middle of a wide window. */
+  width: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
+}
+
+/* The other pages keep to the left at reading width, but Home sets its own width above. */
+.floating-content .content-inner:has(> .home) {
+  max-width: none;
 }
 
 /* Introduction and main action on the left, the device ring on the right. */
 .home-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr) var(--ring-size);
   align-items: start;
-  gap: var(--space-6);
+  /* The space between the two sides widens with the window, up to 96px. */
+  gap: var(--space-6) clamp(var(--space-6), 5vw, 96px);
 }
 
 /* The introduction stays level with the ring, however long the list under it grows. */
 .home-intro {
-  padding-top: 88px;
+  padding-top: calc(var(--ring-size) * 0.23);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -467,7 +478,6 @@
 
 .home-device {
   justify-self: end;
-  margin-right: -44px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -699,7 +709,6 @@
 
   .home-device {
     justify-self: start;
-    margin-right: 0;
     align-items: flex-start;
     text-align: left;
   }
@@ -711,7 +720,7 @@
    ========================= */
 
 .ring {
-  width: 380px;
+  width: var(--ring-size, 380px);
   max-width: 100%;
   height: auto;
 }
