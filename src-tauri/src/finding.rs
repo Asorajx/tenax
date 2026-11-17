@@ -143,3 +143,21 @@ pub fn count_of(count: usize, noun: &str) -> String {
         format!("{count} {noun}s")
     }
 }
+
+// Cuts long text to a number of characters, ending with an ellipsis.
+pub fn shorten(text: &str, max: usize) -> String {
+    if text.chars().count() <= max {
+        return text.to_string();
+    }
+    let kept: String = text.chars().take(max - 1).collect();
+    format!("{kept}…")
+}
+
+// Joins names for a sentence, such as "SPF, DKIM and DMARC" or "SPF, DKIM or DMARC".
+pub fn join_names(names: &[&str], last: &str) -> String {
+    match names {
+        [] => String::new(),
+        [only] => only.to_string(),
+        [rest @ .., end] => format!("{} {last} {end}", rest.join(", ")),
+    }
+}

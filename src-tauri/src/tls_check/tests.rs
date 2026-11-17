@@ -384,7 +384,7 @@ fn a_certificate_from_an_untrusted_authority_is_explained() {
     assert_eq!(trust.summary, "Not trusted: issuer not trusted");
     assert_eq!(trust.status, Status::Risk);
     let row = row(trust, "Issuer not trusted");
-    assert!(row.reason.as_deref().unwrap().contains("workplace"));
+    assert!(row.reason.as_deref().unwrap().contains("managed PC"));
     assert!(!has_row(trust, "Signed by itself"));
 }
 
@@ -881,19 +881,14 @@ fn checks_real_servers() {
 
 #[test]
 fn every_result_says_what_tenax_did_not_check() {
-    // Acceptance is not a guarantee, revocation is not checked and only one certificate is shown.
+    // Revocation is not checked and only one certificate is shown.
     let accepted = check(&Fake::trusted(LEAF), "example.test", IN_DATE);
     let note = card(&accepted, "trust").note.clone().unwrap();
-    assert!(note.contains("does not mean the website itself is safe"));
     assert!(note.contains("does not check whether a certificate has been revoked"));
     assert!(note.contains("only the server's own certificate"));
-    assert!(
-        accepted
-            .verdict
-            .detail
-            .contains("does not mean the website itself is safe")
-    );
-    assert!(accepted.verdict.detail.contains("revoked"));
+    // The accepted result never claims the website is safe, and says revocation was not checked.
+    assert!(!accepted.verdict.detail.contains("safe"));
+    assert!(card(&accepted, "trust").details.iter().any(|d| d.label == "Revocation" && d.value == "Not checked"));
     assert!(
         card(&accepted, "issuer")
             .note

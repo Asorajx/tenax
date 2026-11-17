@@ -3,7 +3,7 @@
 // There is no Windows code here, so every case can be tested with made-up readings.
 
 use super::{FirewallProfiles, ProductState, Readings, SecurityProduct, UpdateStatus};
-use crate::finding::{Detail, Finding, Status, detail, switch};
+use crate::finding::{Detail, Finding, Status, detail, join_names, switch};
 
 // A longer gap than this since the last update check is reported.
 const STALE_CHECK_DAYS: f64 = 7.0;
@@ -86,14 +86,6 @@ impl Check {
     }
 }
 
-fn join_names(names: &[&str]) -> String {
-    match names {
-        [] => String::new(),
-        [only] => only.to_string(),
-        [rest @ .., last] => format!("{} and {}", rest.join(", "), last),
-    }
-}
-
 fn names_where<'a>(
     products: &[&'a SecurityProduct],
     wanted: impl Fn(&SecurityProduct) -> bool,
@@ -149,7 +141,7 @@ fn antivirus(reading: &Result<Vec<SecurityProduct>, String>) -> Finding {
         );
     }
 
-    let all = join_names(&names_where(&products, |_| true));
+    let all = join_names(&names_where(&products, |_| true), "and");
     let active = names_where(&products, |product| product.state == ProductState::On);
 
     if active.is_empty() {
@@ -159,14 +151,14 @@ fn antivirus(reading: &Result<Vec<SecurityProduct>, String>) -> Finding {
         return if !snoozed.is_empty() {
             ANTIVIRUS.finding(
                 Status::Warning,
-                format!("Snoozed · {}", join_names(&snoozed)),
+                format!("Snoozed · {}", join_names(&snoozed, "and")),
                 Some("Open your antivirus and resume protection.".to_string()),
                 details,
             )
         } else if !expired.is_empty() {
             ANTIVIRUS.finding(
                 Status::Risk,
-                format!("Expired · {}", join_names(&expired)),
+                format!("Expired · {}", join_names(&expired, "and")),
                 Some(
                     "Renew it, or uninstall it. Windows turns Microsoft Defender back on when \
                      no other antivirus is active. Restart, then check Windows Security to \
@@ -191,7 +183,7 @@ fn antivirus(reading: &Result<Vec<SecurityProduct>, String>) -> Finding {
     if current.is_empty() {
         return ANTIVIRUS.finding(
             Status::Warning,
-            format!("On, definitions out of date · {}", join_names(&active)),
+            format!("On, definitions out of date · {}", join_names(&active, "and")),
             Some("Open your antivirus and check for updates.".to_string()),
             details,
         );
@@ -263,7 +255,7 @@ fn firewall(
     // with a prompt to confirm, not a warning.
     let active_others = names_where(&others, |product| product.state == ProductState::On);
     if !active_others.is_empty() {
-        let suite = join_names(&active_others);
+        let suite = join_names(&active_others, "and");
         return FIREWALL.finding(
             Status::Info,
             format!("Windows Firewall off · {suite} firewall on"),
@@ -291,7 +283,7 @@ fn firewall(
     } else {
         format!(
             "Off · {} network{}",
-            join_names(&off),
+            join_names(&off, "and"),
             if off.len() == 1 { "" } else { "s" }
         )
     };

@@ -82,7 +82,7 @@ fn a_marketing_email_with_tracking_links_is_limited_not_suspicious() {
             .note
             .as_deref()
             .unwrap()
-            .contains("not visible")
+            .contains("couldn't verify")
     );
 }
 
@@ -331,16 +331,11 @@ fn more_scams_are_flagged_by_what_they_ask_for() {
 }
 
 #[test]
-fn a_clean_result_always_says_it_is_not_a_guarantee() {
+fn a_clean_result_says_what_was_checked_and_not_that_it_is_safe() {
     let report =
         run("Hi Sam, lunch on Friday? I booked the usual place at one, see you there around noon.");
     assert_eq!(report.verdict.status, Status::Ok);
-    assert!(
-        report
-            .verdict
-            .detail
-            .contains("does not guarantee that the email is safe")
-    );
+    assert_eq!(report.verdict.detail, "Only the pasted email text was checked.");
 }
 
 // =========================
@@ -424,7 +419,7 @@ fn relative_and_malformed_links_are_not_guessed_at() {
             .note
             .as_deref()
             .unwrap()
-            .contains("incomplete or malformed")
+            .contains("incomplete, so Tenax couldn't tell")
     );
 }
 
@@ -575,7 +570,7 @@ fn an_address_that_cannot_be_examined_is_limited_not_checked() {
             .note
             .as_deref()
             .unwrap()
-            .contains("could not be fully examined")
+            .contains("couldn't fully examine")
     );
 }
 
@@ -654,7 +649,7 @@ fn repeated_points_about_links_are_joined_into_one_row() {
     );
     assert_eq!(
         tracking[0].reason.as_deref(),
-        Some("Counts clicks before passing you on")
+        Some("This link may record when you click it before taking you to another website")
     );
 }
 
@@ -694,7 +689,7 @@ fn notes_do_not_hide_a_limited_analysis_either() {
     );
     assert_eq!(status(&report, "other"), Status::Info);
     assert_eq!(report.verdict.status, Status::Limited);
-    assert!(report.verdict.detail.contains("not a clean result"));
+    assert!(report.verdict.detail.contains("isn't a clean result"));
 }
 
 #[test]
@@ -869,7 +864,7 @@ fn the_limits_read_naturally_for_one_link_and_for_several() {
             .note
             .as_deref()
             .unwrap()
-            .contains("1 link is incomplete or malformed, so where it goes cannot be told.")
+            .contains("1 link is incomplete, so Tenax couldn't tell where it leads.")
     );
     let two = run(
         "<p>Welcome back to your account area, open <a href=\"/a\">your profile</a> or <a href=\"/b\">help</a> anytime.</p>",
@@ -879,7 +874,7 @@ fn the_limits_read_naturally_for_one_link_and_for_several() {
             .note
             .as_deref()
             .unwrap()
-            .contains("2 links are incomplete or malformed, so where they go cannot be told.")
+            .contains("2 links are incomplete, so Tenax couldn't tell where they lead.")
     );
 }
 
@@ -1005,7 +1000,7 @@ fn a_limited_analysis_is_never_reassuring() {
         if let Ok(report) = report {
             assert_ne!(report.verdict.status, Status::Ok, "{email}");
             assert!(
-                report.verdict.detail.contains("not a clean result"),
+                report.verdict.detail.contains("isn't a clean result"),
                 "{email}"
             );
         }

@@ -104,7 +104,7 @@ fn an_address_typed_without_a_scheme_is_read_with_a_note_that_does_not_change_th
             .note
             .as_deref()
             .unwrap()
-            .contains("https:// was assumed")
+            .contains("assumed HTTPS")
     );
     assert_eq!(report.verdict.status, Status::Ok);
     // Surrounding spaces and a pasted line break are ignored.
@@ -228,7 +228,7 @@ fn a_shortened_link_is_a_warning_and_says_the_destination_is_not_visible() {
             .note
             .as_deref()
             .unwrap()
-            .contains("not visible")
+            .contains("couldn't verify")
     );
     assert_eq!(report.verdict.status, Status::Warning);
 }
@@ -242,10 +242,10 @@ fn a_tracking_address_is_limited_and_never_reported_as_clean() {
         report.verdict.headline,
         "Analysis limited by missing information."
     );
-    assert!(report.verdict.detail.contains("not a clean result"));
+    assert!(report.verdict.detail.contains("isn't a clean result"));
     // The reason reads naturally for one address.
     let note = card(&report, "destination").note.as_deref().unwrap();
-    assert!(note.contains("1 link passes through a tracking or shortening service, so where it finally leads is not visible."), "{note}");
+    assert!(note.contains("Tenax couldn't verify which website this link ultimately opens."), "{note}");
 }
 
 #[test]
@@ -257,7 +257,7 @@ fn a_name_that_cannot_be_checked_against_the_public_list_is_limited() {
             .note
             .as_deref()
             .unwrap()
-            .contains("could not be fully examined")
+            .contains("couldn't fully examine")
     );
     assert_ne!(report.verdict.status, Status::Ok);
 }
@@ -460,4 +460,22 @@ fn odd_input_never_panics() {
         let outcome = std::panic::catch_unwind(|| analyse(&text));
         assert!(outcome.is_ok(), "panicked on {text:?}");
     }
+}
+
+// =========================
+// Tagged addresses
+// =========================
+
+#[test]
+fn tracking_and_personal_tags_are_named_without_their_values() {
+    let report = run("https://www.example.com/page?utm_source=news&mc_eid=jane%40mail.example&x=1");
+    assert!(has_row(&report, "destination", "Tracking tags"));
+    assert!(has_row(&report, "destination", "Personal tags"));
+    assert_eq!(row(&report, "destination", "Tracking tags"), "utm_source");
+    assert_eq!(row(&report, "destination", "Personal tags"), "mc_eid");
+    // An ordinary parameter is not a tag, and the report never repeats a value.
+    assert!(report.findings.iter().all(|card| {
+        card.details.iter().all(|d| !d.value.contains("jane"))
+    }));
+    assert_eq!(report.verdict.status, Status::Ok);
 }

@@ -517,7 +517,7 @@ fn the_owner_card_names_the_service_and_keeps_the_details_apart() {
     assert!(finding.checked.contains("ipinfo.io"));
     let note = finding.note.as_deref().unwrap();
     assert!(note.contains("approximate"));
-    assert!(note.contains("exact physical location"));
+    assert!(note.contains("exact location"));
     // The location row carries its own reason, folded away in the interface.
     let place = finding
         .details

@@ -179,13 +179,13 @@ fn problem_row(problem: Problem, cert: &CertInfo, host: &str, now: i64) -> Detai
                 "Windows checks every certificate between this one and the authority at the top. One of them has run out.{clock}"
             )),
         Problem::NameMismatch => detail("Issued for other names", format!("Does not list {host}")).because(format!(
-            "A certificate is issued for particular names, and this one was not issued for {host}. It is often a mistake on the server, but it is also what happens when a connection is being intercepted."
+            "This certificate wasn't issued for {host}. That is often a server mistake, but it can also happen when a connection is being intercepted."
         )),
         Problem::SelfSigned => detail("Signed by itself", "No authority has confirmed it").because(
-            "The certificate vouches for itself, so Windows has no reason to trust it. This is common on test servers and devices, but a public site should not use one.",
+            "The certificate vouches for itself, so Windows has no reason to trust it. That is common on test servers, but a public site shouldn't use one.",
         ),
         Problem::UntrustedIssuer => detail("Issuer not trusted", "Not linked to a trusted authority").because(
-            "Windows could not trace the certificate back to an authority it trusts. The server may be missing a certificate, the authority may be unknown, or the connection may be intercepted. A workplace can add its own authorities, so on a managed PC ask your IT team.",
+            "Windows couldn't trace the certificate to an authority it trusts. The server may be missing a certificate, the authority may be unknown, or the connection may be intercepted. On a managed PC, ask your IT team.",
         ),
         Problem::Revoked => detail("Revoked", "The issuer withdrew it").because(
             "The authority that issued it has cancelled it, usually because it was stolen or issued by mistake.",
@@ -231,7 +231,8 @@ fn trust_card(
                 "Decided by",
                 "Windows, using the certificate authorities it trusts",
             ));
-            let note = "Windows built a chain from this certificate up to an authority it trusts, and confirmed that the certificate is in date and issued for this name. Authorities added by a workplace count. Acceptance does not mean the website itself is safe. Tenax does not check whether a certificate has been revoked, and shows only the server's own certificate.";
+            details.push(detail("Revocation", "Not checked"));
+            let note = "Windows built a chain from this certificate to an authority it trusts, and confirmed it is in date and issued for this name. Authorities added by a workplace count. Tenax does not check whether a certificate has been revoked, and shows only the server's own certificate.";
             (
                 card(
                     &TRUST,
@@ -432,12 +433,12 @@ fn connection_card(host: &str, address: Option<IpAddr>, failed: &Failed) -> Find
         ),
         Failed::Unreachable { code, text } => (
             "Could not connect",
-            "Check the internet connection and that the site is online. If it is, it may not accept secure connections on port 443, or something may be blocking the connection.",
+            "Check your internet connection and that the site is online. It may also not accept secure connections on port 443, or something may be blocking it.",
             windows_said(*code, text),
         ),
         Failed::Handshake { code, text } => (
             "Secure connection failed",
-            "The server answered, but the secure handshake did not finish. It may not offer secure connections here, or may only use methods Windows no longer allows. Try again later, or ask whoever runs it.",
+            "The server answered, but the secure handshake didn't finish. It may not offer secure connections here, or only use methods Windows no longer allows.",
             windows_said(*code, text),
         ),
     };
@@ -522,14 +523,12 @@ pub fn build(
                 Trust::Trusted if worst >= Status::Info => Verdict {
                     status: Status::Ok,
                     headline: "Certificate accepted by Windows.".to_string(),
-                    detail: format!(
-                        "It is in date and issued for {host} by an authority Windows trusts. That does not mean the website itself is safe, and Tenax does not check whether the certificate has been revoked."
-                    ),
+                    detail: format!("Windows trusts this certificate for {host}."),
                 },
                 Trust::Trusted => Verdict {
                     status: worst,
                     headline: "Certificate accepted by Windows, with points worth noting.".to_string(),
-                    detail: "Windows accepted the certificate, but some of its details deserve attention. Acceptance does not mean the website itself is safe.".to_string(),
+                    detail: "Windows accepted the certificate, but some details need attention.".to_string(),
                 },
                 Trust::NotTrusted { .. } => {
                     let names: Vec<&str> =
@@ -537,7 +536,7 @@ pub fn build(
                     Verdict {
                         status: worst,
                         headline: "This certificate has problems.".to_string(),
-                        detail: format!("Windows does not trust it: {}.", names.join(", ")),
+                        detail: format!("Windows doesn't trust this certificate: {}.", names.join(", ")),
                     }
                 }
             };

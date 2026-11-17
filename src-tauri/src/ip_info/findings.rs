@@ -192,7 +192,7 @@ pub fn reverse(question: &str, answer: &Answer, started: Instant) -> Finding {
                 Status::Ok,
                 count_of(names.len(), "name"),
                 names.iter().map(|name| detail("Name", name)).collect(),
-                "Whoever controls the address chooses this name, so it is a clue about the network and not proof of who is behind it.".to_string(),
+                "This name is associated with the IP address, but doesn't prove who owns it.".to_string(),
                 format!("{} found", count_of(names.len(), "name")),
                 true,
             )
@@ -306,7 +306,7 @@ pub fn owner(ip: IpAddr, outcome: &Result<Owner, String>, started: Instant) -> F
                 if shown == 0 { Status::Info } else { Status::Ok },
                 summary,
                 details,
-                "These details come from the service, not from this PC. The location is approximate: it points to an area, often a city or just a country, and never to a device's exact physical location or to who is using the address. It can also be wrong, especially for VPNs, mobile networks and companies that use one address in many places. Neither ownership nor location says whether an address is good or bad.".to_string(),
+                "These details come from the service, not this PC. The location is approximate, usually a city or country, and never a device's exact location or who is using the address. It can be wrong, especially for VPNs, mobile networks and companies that share one address. Neither ownership nor location says whether an address is good or bad.".to_string(),
                 format!("{} returned", count_of(shown, "detail")),
                 true,
             )

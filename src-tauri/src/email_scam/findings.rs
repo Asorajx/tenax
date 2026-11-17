@@ -505,7 +505,7 @@ pub fn verdict(cards: &[Card]) -> Verdict {
             status: Status::Risk,
             headline: "Strong scam indicators detected.".to_string(),
             detail: format!(
-                "Do not click links, open attachments or reply until you have checked with the sender another way.{also_limited}"
+                "Avoid clicking links, opening attachments or replying until you've verified the sender independently.{also_limited}"
             ),
         }
     } else if any_warning {
@@ -513,7 +513,7 @@ pub fn verdict(cards: &[Card]) -> Verdict {
             status: Status::Warning,
             headline: "Some suspicious indicators worth checking.".to_string(),
             detail: format!(
-                "Look at the points below before you reply, click or pay.{also_limited}"
+                "Review the warning signs before replying, clicking links or making payments.{also_limited}"
             ),
         }
     } else if !limited.is_empty() {
@@ -521,7 +521,7 @@ pub fn verdict(cards: &[Card]) -> Verdict {
             status: Status::Limited,
             headline: "Analysis limited by missing information.".to_string(),
             detail: format!(
-                "Tenax could not check everything: {}. No scam indicators were found in what it could check, but that is not a clean result.",
+                "Some checks couldn't be completed: {}. What Tenax did check showed no scam signs, so this isn't a clean result.",
                 limited.join(", ")
             ),
         }
@@ -529,9 +529,7 @@ pub fn verdict(cards: &[Card]) -> Verdict {
         Verdict {
             status: Status::Ok,
             headline: "No common scam indicators detected.".to_string(),
-            detail: "This only reflects the checks Tenax can run on the text you pasted, and it \
-                     does not guarantee that the email is safe."
-                .to_string(),
+            detail: "Only the pasted email text was checked.".to_string(),
         }
     }
 }

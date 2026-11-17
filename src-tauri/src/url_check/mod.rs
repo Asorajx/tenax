@@ -16,7 +16,7 @@ use url::{Host, Url};
 
 use crate::email_scam::content::RawLink;
 use crate::email_scam::links::{self, Issue, Report, registered};
-use crate::finding::{Detail, Finding, Status, Step, Verdict, count_of, detail};
+use crate::finding::{Detail, Finding, Status, Step, Verdict, count_of, detail, shorten};
 
 // A longer address than this is not a link that anyone would open.
 const MAX_LENGTH: usize = 4096;
@@ -77,14 +77,6 @@ fn normalise(input: &str) -> Result<(String, bool), String> {
     Err("That does not look like a web address.".to_string())
 }
 
-fn shorten(text: &str) -> String {
-    if text.chars().count() <= MAX_PATH_SHOWN {
-        return text.to_string();
-    }
-    let kept: String = text.chars().take(MAX_PATH_SHOWN - 1).collect();
-    format!("{kept}…")
-}
-
 // What the address is made of, so that it can be read part by part.
 fn parts(url: &Url) -> Vec<Detail> {
     let mut rows = vec![detail("Scheme", url.scheme())];
@@ -122,7 +114,7 @@ fn parts(url: &Url) -> Vec<Detail> {
         rows.push(detail("Port", port.to_string()));
     }
     if url.path().len() > 1 {
-        rows.push(detail("Path", shorten(url.path())));
+        rows.push(detail("Path", shorten(url.path(), MAX_PATH_SHOWN)));
     }
     let parameters = url.query_pairs().count();
     if parameters > 0 {
@@ -273,7 +265,7 @@ fn address_card(url: Option<&Url>, assumed: bool, started: Instant) -> Finding {
         ),
     };
     if assumed {
-        note.push("No http:// or https:// was given, so https:// was assumed.".to_string());
+        note.push("No protocol was specified, so Tenax assumed HTTPS.".to_string());
     }
 
     Finding {
@@ -313,27 +305,26 @@ fn verdict(cards: &[Finding]) -> Verdict {
             status: Status::Risk,
             headline: "Strong phishing indicators detected.".to_string(),
             detail:
-                "Do not open this address. If someone sent it to you, check with them another way."
+                "Avoid opening this link. Verify it with the sender through another trusted method."
                     .to_string(),
         }
     } else if any(Status::Warning) {
         Verdict {
             status: Status::Warning,
             headline: "Some suspicious indicators worth checking.".to_string(),
-            detail: "Be careful before opening it, and check that you were expecting it."
-                .to_string(),
+            detail: "Review the findings below before opening this link.".to_string(),
         }
     } else if any(Status::Limited) {
         Verdict {
             status: Status::Limited,
             headline: "Analysis limited by missing information.".to_string(),
-            detail: "Tenax cannot see everything about where this address leads. No suspicious indicators were found in what it could check, but that is not a clean result.".to_string(),
+            detail: "Tenax couldn't check everything, so this isn't a clean result. What it did check showed no suspicious signs.".to_string(),
         }
     } else {
         Verdict {
             status: Status::Ok,
             headline: "No common phishing indicators detected.".to_string(),
-            detail: "This only reflects checks on how the address is written. Tenax did not open it or look up its reputation, and it does not guarantee that the site is safe.".to_string(),
+            detail: "Only the link address was checked, not the website itself.".to_string(),
         }
     }
 }

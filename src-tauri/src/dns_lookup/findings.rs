@@ -10,7 +10,7 @@
 use std::time::Instant;
 
 use super::records::{Answer, Data, Failure, Record};
-use crate::finding::{Detail, Finding, Status, Step, Verdict, count_of, detail};
+use crate::finding::{Detail, Finding, Status, Step, Verdict, count_of, detail, shorten};
 
 // The longest a piece of text is shown before it is cut.
 const MAX_TEXT_SHOWN: usize = 160;
@@ -116,14 +116,6 @@ fn ttl(seconds: u32) -> String {
         3600..=86399 => format!("{} h", seconds / 3600),
         _ => format!("{} d", seconds / 86400),
     }
-}
-
-fn shorten(text: &str) -> String {
-    if text.chars().count() <= MAX_TEXT_SHOWN {
-        return text.to_string();
-    }
-    let kept: String = text.chars().take(MAX_TEXT_SHOWN - 1).collect();
-    format!("{kept}…")
 }
 
 // Without the dot that ends a name, which is how names usually appear in DNS.
@@ -410,7 +402,7 @@ fn text_records(lookup: &Lookup) -> Card {
     let mut rows: Vec<Detail> = texts
         .iter()
         .take(MAX_TEXT_ROWS)
-        .map(|text| detail(text_kind(text), shorten(text)))
+        .map(|text| detail(text_kind(text), shorten(text, MAX_TEXT_SHOWN)))
         .collect();
     if texts.len() > MAX_TEXT_ROWS {
         rows.push(detail(
@@ -631,7 +623,7 @@ fn email_security(lookup: &Lookup) -> Card {
             };
             rows.push(detail("DMARC", headline).because(reason));
             if let Some(reports) = dmarc_tag(record, "rua") {
-                rows.push(detail("Reports sent to", shorten(reports)));
+                rows.push(detail("Reports sent to", shorten(reports, MAX_TEXT_SHOWN)));
             }
             raise(status);
         }
@@ -659,7 +651,7 @@ fn email_security(lookup: &Lookup) -> Card {
     }
     .to_string();
     let action = (status == Status::Warning).then_some(
-        "If you manage this domain, add or fix its SPF and DMARC records. If you do not, email claiming to come from it is easier to forge, so check it with extra care.",
+        "If you manage this domain, add or fix its SPF and DMARC records. If not, treat email claiming to come from it with extra care.",
     );
 
     Card {
@@ -716,7 +708,7 @@ pub fn build(lookup: &Lookup) -> (Verdict, Vec<Finding>) {
             Verdict {
                 status: Status::Info,
                 headline: "This domain name does not exist.".to_string(),
-                detail: "Your DNS server says there is no such domain. A mistyped name, an expired domain or a name that only exists on another network would all look like this.".to_string(),
+                detail: "Your DNS server says this domain doesn't exist. Check the spelling, or it may only exist on another network.".to_string(),
             },
             vec![card],
         );
@@ -749,14 +741,14 @@ pub fn build(lookup: &Lookup) -> (Verdict, Vec<Finding>) {
         Verdict {
             status: Status::Limited,
             headline: "Lookup limited: the DNS server did not answer.".to_string(),
-            detail: "Tenax could not get any records, so this says nothing about the domain. Check the network connection and try again.".to_string(),
+            detail: "No DNS records could be retrieved, so this says nothing about the domain. Check your connection and try again.".to_string(),
         }
     } else if any_points {
         Verdict {
             status: Status::Warning,
             headline: "Records found, with points worth noting.".to_string(),
             detail: format!(
-                "These are the records your DNS server returned. They describe how the domain is set up, not whether it is safe.{}",
+                "These are the DNS records returned by your server.{}",
                 if any_limited {
                     " Some questions also went unanswered."
                 } else {
@@ -768,13 +760,13 @@ pub fn build(lookup: &Lookup) -> (Verdict, Vec<Finding>) {
         Verdict {
             status: Status::Limited,
             headline: "Records found, but some lookups went unanswered.".to_string(),
-            detail: "Part of this picture is missing, so it is not a complete result.".to_string(),
+            detail: "Some DNS queries returned no answer, so the results are incomplete.".to_string(),
         }
     } else {
         Verdict {
             status: Status::Ok,
             headline: "DNS records found.".to_string(),
-            detail: "These are the records your DNS server returned. They describe how the domain is set up, not whether it is safe.".to_string(),
+            detail: "These are the DNS records returned by your server.".to_string(),
         }
     };
 

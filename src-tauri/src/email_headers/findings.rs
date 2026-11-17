@@ -7,7 +7,7 @@ use super::parser::{
     AuthResult, Headers, address_in_name, authentication_results, authserv_id, domain_of,
     parse_hop, parse_mailbox, received_spf, related_hosts, same_domain,
 };
-use crate::finding::{Detail, Finding, Status, Step, count_of, detail, switch};
+use crate::finding::{Detail, Finding, Status, Step, count_of, detail, join_names, switch};
 
 // How many servers of the delivery path are listed before the rest are summarised.
 const MAX_HOPS_SHOWN: usize = 10;
@@ -41,8 +41,7 @@ const PATH: Check = Check {
     id: "path",
     title: "Delivery path",
     checked: "I read the Received headers, which each server adds as it passes a message on.",
-    why: "The path shows which servers handled the message. A first server that does not fit \
-          the claimed sender can be a sign of forgery.",
+    why: "Shows which servers handled the message. A first server that doesn't fit the claimed sender can suggest forgery.",
 };
 
 impl Check {
@@ -106,15 +105,6 @@ fn describe(result: &AuthResult) -> String {
     match &result.domain {
         Some(domain) => format!("{word} · {domain}"),
         None => word.to_string(),
-    }
-}
-
-// Joins names for a sentence, such as "SPF, DKIM and DMARC".
-fn join_names(names: &[&str], last: &str) -> String {
-    match names {
-        [] => String::new(),
-        [only] => only.to_string(),
-        [rest @ .., end] => format!("{} {last} {end}", rest.join(", ")),
     }
 }
 
@@ -246,7 +236,7 @@ pub fn authentication(headers: &Headers) -> Finding {
         note.push("No SPF, DKIM or DMARC results were reported.".to_string());
     } else {
         if !passed.is_empty() {
-            note.push(format!("{} passed.", join_names(&passed, "and")));
+            note.push(format!("{} passed according to the headers.", join_names(&passed, "and")));
         }
         if !failed.is_empty() {
             note.push(format!("{} failed.", join_names(&failed, "and")));
@@ -267,8 +257,7 @@ pub fn authentication(headers: &Headers) -> Finding {
             );
         } else if !backed && failed.is_empty() && weak.is_empty() {
             note.push(format!(
-                "The passing checks are for {}, not the domain in the From address, so they do \
-                 not show who really sent this email.",
+                "The passing checks are for {}, not the From address, so they don't show who really sent this email.",
                 if passed_domains.is_empty() {
                     "another domain".to_string()
                 } else {
@@ -283,29 +272,19 @@ pub fn authentication(headers: &Headers) -> Finding {
                     .to_string(),
             );
         }
-        if status == Status::Ok || status == Status::Info {
-            note.push("Passing checks do not guarantee that the email is safe.".to_string());
-        }
-        note.push(
-            "Tenax reads these results from the headers and does not run the checks itself, \
-             so they are only as trustworthy as the server that wrote them."
-                .to_string(),
-        );
+        note.push("Tenax did not independently verify these results.".to_string());
     }
 
     let action = match status {
         Status::Risk => Some(
-            "Verify the sender through a trusted channel, such as their official website or \
-             phone number, before trusting this email. Do not open attachments or follow \
-             links until you have.",
+            "Verify the sender through a trusted channel, such as their official website or phone number. Avoid opening attachments or links until you have.",
         ),
         Status::Warning => Some(
             "Verify the sender through a trusted channel before acting on anything in this \
              email.",
         ),
         _ if none_reported => Some(
-            "Paste the full headers of the received message. The results are added by the \
-             receiving mail server, so a copied or forwarded message may not have them.",
+            "Paste the full headers of the received message. Forwarded or copied messages may not include these results.",
         ),
         _ => None,
     };
@@ -488,9 +467,7 @@ pub fn identity(headers: &Headers) -> Finding {
                             "This email appears to have been sent through {name}, which is common \
                              for automated emails."
                         ),
-                        None => "The Return-Path uses a different domain from the From address. \
-                                 This is common when a mailing service sends on someone's behalf, \
-                                 and is not a problem by itself."
+                        None => "The Return-Path domain differs from the From address. This is common when a mailing service sends on someone's behalf."
                             .to_string(),
                     };
                     if authentication_supports(headers, from_domain) {
@@ -753,9 +730,9 @@ Authentication-Results: mx.example.net; spf=pass smtp.mailfrom=a@example.com; dk
         assert_eq!(finding.summary, "Sender authentication passed");
         assert_eq!(finding.action, None);
         let note = finding.note.unwrap();
-        assert!(note.contains("SPF and DMARC passed."));
+        assert!(note.contains("SPF and DMARC passed according to the headers."));
         assert!(note.contains("No DKIM authentication result was reported."));
-        assert!(note.contains("do not guarantee"));
+        assert!(note.contains("did not independently verify"));
     }
 
     #[test]
@@ -772,7 +749,7 @@ Authentication-Results: mx.example.net; spf=pass smtp.mailfrom=a@example.com; dk
         let risk = authentication(&parse(
             "Authentication-Results: x.example; dmarc=fail header.from=a.com",
         ));
-        assert!(risk.action.unwrap().contains("Do not open attachments"));
+        assert!(risk.action.unwrap().contains("Avoid opening attachments"));
         let warning = authentication(&parse(
             "Authentication-Results: x.example; spf=fail smtp.mailfrom=a@b.com; dkim=pass header.d=b.com",
         ));
@@ -913,7 +890,7 @@ Reply-To: b@elsewhere.net",
             finding
                 .note
                 .unwrap()
-                .contains("not the domain in the From address")
+                .contains("not the From address")
         );
     }
 
@@ -1030,10 +1007,7 @@ Reply-To: b@elsewhere.net",
                     words.push(' ');
                     words.push_str(&detail.value);
                 }
-                // The one allowed use is to say that a pass is not a guarantee.
-                let words = words
-                    .to_lowercase()
-                    .replace("do not guarantee that the email is safe", "");
+                let words = words.to_lowercase();
                 for banned in ["safe", "legitimate", "genuine", "verified sender"] {
                     assert!(!words.contains(banned), "{banned} in {words}");
                 }

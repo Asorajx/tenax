@@ -200,6 +200,37 @@ const TRACKING_LABELS: &[&str] = &[
     "redirect", "r", "t", "e",
 ];
 
+// Parts of a link address that tag a click. Campaign tags say which message or advertisement a click came
+// from. Personal tags can say who received the link. Only their names are shown, never their values,
+// since a value can be someone's email address.
+const CAMPAIGN_TAGS: &[&str] = &[
+    "fbclid", "gclid", "dclid", "msclkid", "gbraid", "wbraid", "igshid", "yclid", "ttclid", "twclid",
+    "mc_cid", "li_fat_id", "_hsenc", "_hsmi",
+];
+const PERSONAL_TAGS: &[&str] = &[
+    "mc_eid", "mkt_tok", "vero_id", "uid", "user_id", "userid", "email", "recipient", "recipient_id",
+    "subscriber", "subscriber_id",
+];
+
+// The names of the tagging parts found in an address: campaign tags first, then personal ones.
+fn tags_in(url: &Url) -> (Vec<String>, Vec<String>) {
+    let (mut campaign, mut personal) = (Vec::new(), Vec::new());
+    for (key, _) in url.query_pairs() {
+        let name = key.to_ascii_lowercase();
+        let list = if name.starts_with("utm_") || CAMPAIGN_TAGS.contains(&name.as_str()) {
+            &mut campaign
+        } else if PERSONAL_TAGS.contains(&name.as_str()) {
+            &mut personal
+        } else {
+            continue;
+        };
+        if !list.contains(&name) {
+            list.push(name);
+        }
+    }
+    (campaign, personal)
+}
+
 // Endings that are free or cheap to register and often used in scams, or that can be mistaken
 // for a file name. Only a note, since honest sites use them too.
 const ODD_ENDINGS: &[&str] = &["zip", "mov", "tk", "ml", "ga", "cf", "gq"];
@@ -584,6 +615,24 @@ impl Context {
         self.analysed += 1;
         let carrier = self.check_site(url, raw);
 
+        let (campaign, personal) = tags_in(url);
+        if !campaign.is_empty() {
+            self.add_named(
+                Status::Info,
+                "Tracking tags",
+                campaign.join(", "),
+                "These tags show which message or advertisement a click came from".to_string(),
+            );
+        }
+        if !personal.is_empty() {
+            self.add_named(
+                Status::Info,
+                "Personal tags",
+                personal.join(", "),
+                "These tags can tell the sender who received this link".to_string(),
+            );
+        }
+
         // A destination written into the link can be read, so it is checked as well.
         let destination = embedded_destination(url);
         let destination_site = destination.as_ref().map(|found| {
@@ -591,7 +640,7 @@ impl Context {
             self.add(
                 Status::Info,
                 "Redirect link",
-                format!("{} passes you on to {}", carrier.host, site.host),
+                format!("{} sends you on to {}", carrier.host, site.host),
             );
             site
         });
@@ -640,7 +689,7 @@ impl Context {
                 self.add(
                     Status::Warning,
                     "Link text differs from where it goes",
-                    format!("Shows {site}, but opens through {}, so the real destination is not visible", actual.host),
+                    format!("Shows {site}, but opens through {}, so Tenax couldn't verify where it leads", actual.host),
                 );
             }
             return;
@@ -781,7 +830,7 @@ impl Context {
                 Status::Warning,
                 "Shortened link",
                 shown_host.clone(),
-                "Hides where the link really goes".to_string(),
+                "This short link hides the website it leads to".to_string(),
             );
         }
 
@@ -798,7 +847,7 @@ impl Context {
                 Status::Info,
                 "Tracking link",
                 shown_host.clone(),
-                "Counts clicks before passing you on".to_string(),
+                "This link may record when you click it before taking you to another website".to_string(),
             );
         }
 
@@ -940,24 +989,15 @@ pub fn analyse(links: &[RawLink], elements: &[Element], text: &str) -> Report {
 
     let mut limits = Vec::new();
     if context.hidden > 0 {
-        limits.push(format!(
-            "{} {} through a tracking or shortening service, so where {} is not visible.",
-            count_of(context.hidden, "link"),
-            if context.hidden == 1 {
-                "passes"
-            } else {
-                "pass"
-            },
-            if context.hidden == 1 {
-                "it finally leads"
-            } else {
-                "they finally lead"
-            },
-        ));
+        limits.push(if context.hidden == 1 {
+            "Tenax couldn't verify which website this link ultimately opens.".to_string()
+        } else {
+            format!("Tenax couldn't verify which websites {} links ultimately open.", context.hidden)
+        });
     }
     if context.unresolved > 0 {
         limits.push(format!(
-            "{} could not be fully examined, because {} not a normal public web address.",
+            "Tenax couldn't fully examine {}, because {} not a normal public website name.",
             count_of(context.unresolved, "address"),
             if context.unresolved == 1 {
                 "its name is"
@@ -968,13 +1008,13 @@ pub fn analyse(links: &[RawLink], elements: &[Element], text: &str) -> Report {
     }
     if context.incomplete > 0 {
         limits.push(format!(
-            "{} {} incomplete or malformed, so where {} cannot be told.",
+            "{} {} incomplete, so Tenax couldn't tell where {}.",
             count_of(context.incomplete, "link"),
             if context.incomplete == 1 { "is" } else { "are" },
             if context.incomplete == 1 {
-                "it goes"
+                "it leads"
             } else {
-                "they go"
+                "they lead"
             },
         ));
     }
@@ -1169,7 +1209,7 @@ mod tests {
         let report = analyse(&links(&["https://bit.ly/3abc"]), &[], "");
         assert_eq!(status_of(&report, "Shortened link"), Some(Status::Warning));
         assert_eq!(report.unknown, 1);
-        assert!(report.limits[0].contains("not visible"));
+        assert!(report.limits[0].contains("couldn't verify"));
     }
 
     #[test]
