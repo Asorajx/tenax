@@ -7,6 +7,7 @@ import "./styles/shell.css";
 import "./styles/components.css";
 import "./styles/floating.css";
 import App from "./App";
+import Splash from "./components/Splash";
 import { startFluidHover } from "./app/fluidHover";
 import { DeviceCheckProvider } from "./app/deviceCheck";
 import { applyLayout, loadLayout } from "./app/layout";
@@ -32,6 +33,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       <RecentProvider>
         <DeviceCheckProvider>
           <App />
+          <Splash />
         </DeviceCheckProvider>
       </RecentProvider>
     </NetworkProvider>

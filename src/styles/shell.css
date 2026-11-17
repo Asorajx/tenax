@@ -408,3 +408,154 @@
 .nav-item:hover .network-indicator {
   opacity: 1;
 }
+
+
+/* =========================
+   Splash
+   ========================= */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  transition: opacity 300ms ease;
+}
+
+.splash[data-leaving] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-logo {
+  display: flex;
+  align-items: center;
+}
+
+/* The word opens out beside the mark, so the mark glides to the side as the pair re-centres. */
+.splash-word {
+  display: grid;
+  grid-template-columns: 0fr;
+  animation: splash-word 600ms cubic-bezier(0.2, 0.7, 0.2, 1) 1950ms forwards;
+}
+
+.splash-word span {
+  min-width: 0;
+  overflow: hidden;
+  padding-left: 32px;
+  font-size: 88px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text);
+  white-space: nowrap;
+  opacity: 0;
+  animation: splash-fade 600ms ease-out 1950ms forwards;
+}
+
+.splash-mark {
+  width: 160px;
+  height: 160px;
+  overflow: visible;
+  animation: splash-impact 450ms ease-out 830ms;
+}
+
+.splash-bar,
+.splash-stem {
+  fill: var(--text);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* The bar zooms in as if the screen is moving closer. */
+.splash-bar {
+  animation: splash-zoom 450ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+/* The stem rises from below and hits the bar. */
+.splash-stem {
+  animation: splash-smash 180ms cubic-bezier(0.7, 0, 1, 1) 650ms forwards;
+}
+
+.splash-spark {
+  fill: var(--text);
+  opacity: 0;
+  animation: splash-spark 500ms cubic-bezier(0.1, 0.7, 0.3, 1) 830ms;
+}
+
+/* The shield is revealed from top to bottom, like light falling across it. */
+.splash-shield {
+  fill: var(--accent);
+  opacity: 0.55;
+  clip-path: inset(0 0 100% 0);
+  animation: splash-reveal 800ms cubic-bezier(0.7, 0, 0.84, 0) 1050ms forwards;
+}
+
+@keyframes splash-word {
+  to {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes splash-fade {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes splash-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.15);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes splash-smash {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splash-spark {
+  from {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--x), var(--y));
+  }
+}
+
+@keyframes splash-impact {
+  15% {
+    transform: scale(1.12) translateY(4px);
+  }
+  35% {
+    transform: scale(0.97) translateY(-2px);
+  }
+  55% {
+    transform: scale(1.04) translateY(1px);
+  }
+}
+
+@keyframes splash-reveal {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
