@@ -1,5 +1,5 @@
 import CopyButton from "./CopyButton";
-import { BadgeInfo, CircleAlert, CircleCheck, CircleHelp, Info, TriangleAlert, type LucideIcon } from "lucide-react";
+import { BadgeInfo, ChevronDown, CircleAlert, CircleCheck, CircleHelp, Info, TriangleAlert, type LucideIcon } from "lucide-react";
 
 /* =========================
    Finding
@@ -96,15 +96,27 @@ interface FindingCardProps {
 
 export default function FindingCard({ finding, link, onAnalyseUrl }: FindingCardProps) {
   const status = STATUSES[finding.status];
-  const reasons = (finding.details ?? []).filter((detail) => detail.reason);
+  /* A check with nothing wrong and nothing to switch on or off is folded to one row. Anything that */
+  /* needs a look, has something to do, shows on and off states, or lists links stays open. */
+  const hasBody = Boolean(finding.details?.length || finding.urls?.length || finding.note || finding.action);
+  const quiet =
+    (finding.status === "ok" || finding.status === "info") &&
+    !finding.urls?.length &&
+    !finding.action &&
+    !finding.details?.some((detail) => detail.active !== undefined);
+  const foldable = hasBody && quiet;
 
-  return (
-    <article className="finding" data-status={finding.status}>
-      <header className="finding-header">
-        <status.icon className="finding-icon" size={18} strokeWidth={1.75} role="img" aria-label={status.label} />
-        <h3>{finding.title}</h3>
-        <span className="finding-state">{finding.summary}</span>
-      </header>
+  const header = (
+    <>
+      <status.icon className="finding-icon" size={18} strokeWidth={1.75} role="img" aria-label={status.label} />
+      <h3>{finding.title}</h3>
+      <span className="finding-state">{finding.summary}</span>
+      {foldable && <ChevronDown className="finding-chevron" size={16} strokeWidth={1.75} aria-hidden="true" />}
+    </>
+  );
+
+  const body = (
+    <>
 
       {finding.details && (
         <ul className="finding-items">
@@ -113,6 +125,7 @@ export default function FindingCard({ finding, link, onAnalyseUrl }: FindingCard
               <span className="finding-dot" data-active={detail.active} aria-hidden="true" />
               <span>{detail.label}</span>
               <span className="finding-value">{detail.value}</span>
+              {detail.reason && <span className="finding-reason">{detail.reason}</span>}
             </li>
           ))}
         </ul>
@@ -144,19 +157,6 @@ export default function FindingCard({ finding, link, onAnalyseUrl }: FindingCard
         </ul>
       )}
 
-      {reasons.length > 0 && (
-        <details className="finding-why">
-          <summary>Why this matters</summary>
-          <ul>
-            {reasons.map((detail, index) => (
-              <li key={`${detail.label}-${index}`}>
-                <strong>{detail.label}</strong> {detail.reason}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-
       {finding.note && <p className="finding-note">{finding.note}</p>}
 
       {finding.action && (
@@ -165,6 +165,22 @@ export default function FindingCard({ finding, link, onAnalyseUrl }: FindingCard
           <span>{withLink(finding.action, link)}</span>
         </p>
       )}
+    </>
+  );
+
+  if (foldable) {
+    return (
+      <details className="finding" data-status={finding.status}>
+        <summary className="finding-header">{header}</summary>
+        {body}
+      </details>
+    );
+  }
+
+  return (
+    <article className="finding" data-status={finding.status}>
+      <header className="finding-header">{header}</header>
+      {body}
     </article>
   );
 }

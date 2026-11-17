@@ -74,7 +74,7 @@ export default function PasswordStrength({ tool, handoff, onHandoffUsed }: Passw
             title="Password Strength"
             findings={findings}
             seconds={(findings[0].steps?.[0].ms ?? 0) / 1000}
-            footer="Analysed on this device · Password not stored · No data transmitted"
+            footer="Checked locally · No data sent"
           />
         </>
       )}

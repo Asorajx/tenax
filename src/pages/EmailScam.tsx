@@ -88,7 +88,7 @@ export default function EmailScam({ tool, onAnalyseUrl }: EmailScamProps) {
             findings={report.findings}
             seconds={seconds}
             result={report.verdict.headline}
-            footer="Analysed on this device · Email not stored · No data transmitted"
+            footer="Checked locally · No data sent"
           />
         </>
       )}

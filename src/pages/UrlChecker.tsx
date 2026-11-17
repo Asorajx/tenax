@@ -133,7 +133,7 @@ export default function UrlChecker({ tool, handoff, onHandoffUsed }: UrlCheckerP
             findings={report.findings}
             seconds={seconds}
             result={report.verdict.headline}
-            footer="Analysed on this device · Address not opened or stored · No data transmitted"
+            footer="Checked locally · Address not opened · No data sent"
           />
         </>
       )}

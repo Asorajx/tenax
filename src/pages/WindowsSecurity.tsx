@@ -1,16 +1,13 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useDeviceCheck } from "../app/deviceCheck";
 import type { Tool } from "../app/tools";
 import ActivityLog from "../components/ActivityLog";
-import FindingCard, { type Finding } from "../components/Finding";
+import FindingCard from "../components/Finding";
 import ToolPage from "../components/ToolPage";
 
 /* =========================
    Windows Security
    ========================= */
-
-/* The checks this page runs, shown before the first run. */
-const CHECKS = ["Antivirus", "Firewall", "Windows Update"];
 
 /* How long the icon takes to finish filling once the results are in. */
 const FILL_FINISH_MS = 180;
@@ -19,26 +16,17 @@ const FILL_FINISH_MS = 180;
 type CheckState = "idle" | "loading" | "finishing" | "done" | "error";
 
 export default function WindowsSecurity({ tool }: { tool: Tool }) {
-  const [state, setState] = useState<CheckState>("idle");
-  const [findings, setFindings] = useState<Finding[]>([]);
-  const [seconds, setSeconds] = useState(0);
-  const [error, setError] = useState("");
+  /* The result is shared with the Home screen, so it is read once and shown in both. If it was already */
+  /* read there, this page opens straight onto it. */
+  const { phase, findings, seconds, error, run } = useDeviceCheck();
+  const [finishing, setFinishing] = useState(false);
+  const state: CheckState = phase === "done" && finishing ? "finishing" : phase;
 
-  /* Asks the Rust backend to read the settings, then shows what it returns. */
+  /* Reads the settings, then lets the icon fill the rest of the way before the results are shown. */
   async function runCheck() {
-    setState("loading");
-    const started = performance.now();
-    try {
-      setFindings(await invoke<Finding[]>("check_windows_security"));
-      setSeconds((performance.now() - started) / 1000);
-
-      /* The results are in, so the icon fills the rest of the way before they are shown. */
-      setState("finishing");
-      window.setTimeout(() => setState("done"), FILL_FINISH_MS);
-    } catch (reason) {
-      setError(String(reason));
-      setState("error");
-    }
+    setFinishing(true);
+    await run();
+    window.setTimeout(() => setFinishing(false), FILL_FINISH_MS);
   }
 
   /* The one-line result shown above the findings. It only speaks for the checks that ran. */
@@ -60,7 +48,6 @@ export default function WindowsSecurity({ tool }: { tool: Tool }) {
   const info = (
     <>
       <p>Tenax only reads these settings. Nothing is changed, and nothing leaves this PC.</p>
-      <p>Correct settings lower risk, but they cannot confirm a PC is secure.</p>
     </>
   );
 
@@ -82,7 +69,6 @@ export default function WindowsSecurity({ tool }: { tool: Tool }) {
           </div>
           <div className="hero-text" role="status">
             <h2>{state === "idle" ? "Ready to check this PC" : "Reading Windows security settings…"}</h2>
-            <p>It takes about a second, and nothing is changed.</p>
           </div>
           <button
             type="button"
@@ -92,11 +78,6 @@ export default function WindowsSecurity({ tool }: { tool: Tool }) {
           >
             Run check
           </button>
-          <ul className="hero-checks" aria-label="What is checked">
-            {CHECKS.map((check) => (
-              <li key={check}>{check}</li>
-            ))}
-          </ul>
         </div>
       )}
 
@@ -120,7 +101,7 @@ export default function WindowsSecurity({ tool }: { tool: Tool }) {
             title="Windows Security"
             findings={findings}
             seconds={seconds}
-            footer="Read-only · No settings changed · No data transmitted"
+            footer="Read-only check · No settings changed"
           />
         </>
       )}

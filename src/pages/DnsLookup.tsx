@@ -24,11 +24,6 @@ type CheckState = "idle" | "loading" | "done" | "error";
 
 /* A lookup only ever runs when Look up is pressed. Nothing else starts one, and no other tool */
 /* hands an address to this page, because a lookup sends the domain name over the network. */
-/* A DNS server on the user's own network can answer some names, so a lookup needs Tenax's network */
-/* access to be on, but not always an internet connection. */
-const NO_INTERNET_NEEDED =
-  "DNS queries need network access, but not necessarily an internet connection: a DNS server on your own network can answer some names.";
-
 export default function DnsLookup({ tool }: { tool: Tool }) {
   const { enabled } = useNetwork();
   const [domain, setDomain] = useState("");
@@ -36,9 +31,6 @@ export default function DnsLookup({ tool }: { tool: Tool }) {
   const [report, setReport] = useState<DnsReport | null>(null);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState("");
-
-  /* The privacy notice is shown until the first lookup has been asked for. */
-  const [noticeSeen, setNoticeSeen] = useState(false);
 
   /* Only the newest lookup may show its result, in case two are started close together. */
   const latest = useRef(0);
@@ -56,7 +48,6 @@ export default function DnsLookup({ tool }: { tool: Tool }) {
   async function lookUp() {
     if (!enabled || !domain.trim() || state === "loading") return;
     const mine = ++latest.current;
-    setNoticeSeen(true);
     setState("loading");
     const started = performance.now();
     try {
@@ -75,18 +66,7 @@ export default function DnsLookup({ tool }: { tool: Tool }) {
   return (
     <ToolPage tool={tool} info={<p>{tool.privacy}</p>}>
       <NetworkNotice />
-      {noticeSeen ? (
-        <p className="network-note">
-          Uses the network: the domain name is sent to this PC's DNS server. Tenax's other checks run offline.{" "}
-          {NO_INTERNET_NEEDED}
-        </p>
-      ) : (
-        <div className="notice" role="note">
-          <strong>This lookup uses the network.</strong> Tenax will send the domain name to the DNS server this PC
-          already uses, the same one your browser uses. That server may pass the question on to others, as it does for
-          any website you visit. Nothing else is sent, and Tenax's other checks run offline. {NO_INTERNET_NEEDED}
-        </div>
-      )}
+      <p className="network-note">The domain name is sent to this PC's DNS server.</p>
 
       <form
         className="field"
@@ -135,7 +115,7 @@ export default function DnsLookup({ tool }: { tool: Tool }) {
             findings={report.findings}
             seconds={seconds}
             result={report.verdict.headline}
-            footer="Asked this PC's DNS server about the domain · Only the domain name was sent"
+            footer="Domain name sent to this PC's DNS server"
           />
         </>
       )}

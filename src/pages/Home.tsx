@@ -9,10 +9,6 @@ export default function Home({ onNavigate }: { onNavigate: (page: string) => voi
     <>
       <header className="page-header">
         <h1>Home</h1>
-        <p>
-          Tenax explains what it finds, why it matters and what to do next. It does not give
-          security scores or promise that anything is safe.
-        </p>
       </header>
 
       {TOOL_GROUPS.map((group) => (

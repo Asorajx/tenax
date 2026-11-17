@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Tool } from "../app/tools";
 import ActivityLog from "../components/ActivityLog";
 import FindingCard, { type Finding } from "../components/Finding";
+import NetworkNotice from "../components/NetworkNotice";
 import ToolPage from "../components/ToolPage";
 import { useNetwork } from "../app/network";
 import VerdictBlock, { type Verdict } from "../components/VerdictBlock";
@@ -36,12 +37,6 @@ interface Lookup {
   /* Why it did not run, such as network access being turned off while it waited. */
   error?: string;
 }
-
-/* What the two optional lookups say while the sidebar switch is off. */
-const NETWORK_OFF = "Network access is off. Turn it on in the sidebar to use this lookup.";
-
-/* Reverse DNS goes to the DNS server this PC uses, so it needs network access but not always the internet. */
-const REVERSE_OFF = `${NETWORK_OFF} DNS queries need network access, but not necessarily an internet connection.`;
 
 const NOT_ASKED: Lookup = { state: "idle", finding: null };
 
@@ -145,7 +140,7 @@ export default function IpInformation({ tool }: { tool: Tool }) {
   const sent = ["Address type worked out on this PC"];
   if (reverse.finding) sent.push("address sent to this PC's DNS server");
   if (owner.finding) sent.push(`address sent to ${SERVICE}`);
-  const footer = reverse.finding || owner.finding ? sent.join(" · ") : `${sent[0]} · Nothing was sent`;
+  const footer = reverse.finding || owner.finding ? sent.join(" · ") : `${sent[0]} · No data sent`;
 
   const logged = [...(report?.findings ?? []), ...[reverse.finding, owner.finding].filter((f): f is Finding => !!f)];
 
@@ -193,6 +188,9 @@ export default function IpInformation({ tool }: { tool: Tool }) {
         <>
           <VerdictBlock verdict={report.verdict} />
 
+          {/* The two lookups below need network access, so the notice shows once, with its switch. */}
+          {(report.canReverse || report.canExternal) && <NetworkNotice />}
+
           <Source title="Address type" tag="On this PC">
             <div className="findings">
               {report.findings.map((finding) => (
@@ -209,9 +207,7 @@ export default function IpInformation({ tool }: { tool: Tool }) {
             ) : (
               <div className="source-ask">
                 <p>
-                  {report.canReverse && !enabled
-                    ? REVERSE_OFF
-                    : report.canReverse
+                  {report.canReverse
                     ? "Asks the DNS server this PC already uses which name this address has. The address is sent to that server, which may pass the question on. It needs network access, but not necessarily an internet connection."
                     : "Not offered for this kind of address, because it has no name worth asking for."}
                 </p>
@@ -260,9 +256,7 @@ export default function IpInformation({ tool }: { tool: Tool }) {
             ) : (
               <div className="source-ask">
                 <p>
-                  {report.canExternal && !enabled
-                    ? NETWORK_OFF
-                    : report.canExternal
+                  {report.canExternal
                     ? `Asks ${SERVICE}, an outside service, who runs this network and roughly where it is. It only runs if you confirm.`
                     : "Not offered for this address, because only public addresses can be looked up with an outside service."}
                 </p>

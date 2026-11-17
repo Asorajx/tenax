@@ -1,0 +1,876 @@
+/* =========================
+   Floating Layout
+   ========================= */
+
+/* Everything here applies only while <html> has data-layout="floating". Deleting this file, and the */
+/* components in src/components/floating, removes the layout. The classic styles are not touched. */
+
+/* The window itself is see-through, so the page must not paint its own background. The veil below */
+/* does that, and is solid unless Windows has given the window an Acrylic backdrop. */
+:root[data-layout="floating"] body {
+  background: transparent;
+}
+
+.floating-shell {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: var(--glass-veil);
+}
+
+/* The colour of the part of the app you are in. Buttons and links keep the brand accent. */
+.floating-shell {
+  --ws: var(--accent);
+}
+
+.floating-shell[data-ws="investigate"] {
+  --ws: var(--ws-investigate);
+}
+
+.floating-shell[data-ws="network"] {
+  --ws: var(--ws-network);
+}
+
+.floating-shell[data-ws="passwords"] {
+  --ws: var(--ws-passwords);
+}
+
+.floating-shell[data-ws="device"] {
+  --ws: var(--ws-device);
+}
+
+
+/* =========================
+   Title Bar
+   ========================= */
+
+.titlebar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--titlebar-height);
+  user-select: none;
+}
+
+/* The mark and name do not take the mouse, so dragging them drags the window. */
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding-left: var(--page-margin);
+  color: var(--text-muted);
+  font-size: var(--text-base);
+  pointer-events: none;
+}
+
+/* The same size and spacing as a navigation icon and its name. */
+.titlebar-mark {
+  width: 17px;
+  height: 17px;
+}
+
+.titlebar-mark-shield {
+  fill: var(--accent);
+  opacity: 0.55;
+}
+
+.titlebar-controls {
+  display: flex;
+  height: 100%;
+}
+
+/* The same size and symbols as the Windows caption buttons. */
+.caption-button {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: default;
+  transition: background var(--transition);
+}
+
+.caption-button:hover {
+  background: var(--glass-hover);
+}
+
+.caption-button[data-kind="close"]:hover {
+  background: #c42b1c;
+  color: #ffffff;
+}
+
+.caption-glyph {
+  font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets";
+  font-size: 10px;
+  line-height: 1;
+}
+
+
+/* =========================
+   Dock
+   ========================= */
+
+/* The navigation lives in the title bar. It has no background or border. The empty space between the */
+/* two groups still belongs to the drag region, so the window can always be moved. */
+.dock {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  align-self: stretch;
+  min-width: 0;
+  padding-left: var(--space-3);
+}
+
+.dock-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Network access and Settings sit at the right, with clear space before the window buttons. */
+.dock-end {
+  margin-right: var(--space-5);
+}
+
+.dock-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--text-base);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.dock-item[data-workspace="investigate"] {
+  --ws: var(--ws-investigate);
+}
+
+.dock-item[data-workspace="network"] {
+  --ws: var(--ws-network);
+}
+
+.dock-item[data-workspace="passwords"] {
+  --ws: var(--ws-passwords);
+}
+
+.dock-item[data-workspace="device"] {
+  --ws: var(--ws-device);
+}
+
+.dock-item:hover {
+  background: var(--glass-hover);
+  color: var(--text);
+}
+
+/* The page you are on is a little brighter, in the colour of its workspace. */
+.dock-item[aria-current="page"] {
+  background: color-mix(in srgb, var(--ws) 15%, transparent);
+  color: var(--text);
+}
+
+.dock-item[aria-current="page"] .dock-icon svg {
+  color: var(--ws);
+}
+
+/* The icon and its name settle a few pixels lower under the cursor and on keyboard focus, and rise back */
+/* when it leaves. The highlight behind them stays where it is. */
+.dock-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 200ms var(--ease);
+}
+
+.dock-item:hover .dock-inner,
+.dock-item:focus-visible .dock-inner {
+  transform: translateY(3px);
+}
+
+.dock-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+/* On the network switch: hollow when it is off, filled when it is on. */
+.dock-dot {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid var(--text-faint);
+  border-radius: 50%;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.dock-dot[data-on="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--accent) 55%, transparent);
+  animation: dock-dot-on 700ms ease-out;
+}
+
+/* One ring spreads out when it is switched on, then the dot stays still. */
+@keyframes dock-dot-on {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+
+  to {
+    box-shadow: 0 0 0 9px transparent;
+  }
+}
+
+/* The globe takes the accent colour while Network access is on. */
+.dock-item[aria-checked="true"] .dock-icon svg {
+  color: var(--accent);
+}
+
+/* The name shown under an icon on hover or keyboard focus. Items that already write their name beside */
+/* the icon do not need it until the window is narrow. */
+.dock-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  padding: 4px var(--space-3);
+  border-radius: 8px;
+  background: var(--glass-overlay);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition: opacity 140ms ease, transform 160ms var(--ease);
+  backdrop-filter: blur(16px);
+}
+
+/* The right-hand icons are near the window edge, so their names open towards the left. */
+.dock-end .dock-tip {
+  right: 0;
+  left: auto;
+  transform: translate(0, -4px);
+}
+
+.dock-item:hover .dock-tip,
+.dock-item:focus-visible .dock-tip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 100ms;
+}
+
+.dock-end .dock-item:hover .dock-tip,
+.dock-end .dock-item:focus-visible .dock-tip {
+  transform: translate(0, 0);
+}
+
+.dock-item[data-labelled="true"] .dock-tip {
+  display: none;
+}
+
+.dock-item:focus-visible {
+  outline-offset: -2px;
+}
+
+/* On a narrow window the names are dropped and the icons keep their hover names. */
+@media (max-width: 979px) {
+  .dock-label {
+    display: none;
+  }
+
+  .dock-item[data-labelled="true"] .dock-tip {
+    display: block;
+  }
+
+  .dock-item {
+    padding: 0 var(--space-2);
+  }
+}
+
+@media (max-width: 799px) {
+  .titlebar-name {
+    display: none;
+  }
+}
+
+/* With reduced motion the icons do not move at all. The highlight still shows where you are. */
+@media (prefers-reduced-motion: reduce) {
+  .dock-item:hover .dock-inner,
+  .dock-item:focus-visible .dock-inner {
+    transform: none;
+  }
+}
+
+
+/* =========================
+   Content
+   ========================= */
+
+/* The content shares the window background and fills the width under the title bar. The left margin is */
+/* wider than the right, so the content sits comfortably away from the window edge. */
+.floating-content {
+  position: absolute;
+  inset: var(--titlebar-height) 0 0 0;
+  padding: var(--space-4) var(--content-right) var(--space-6) var(--content-inset);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  /* The page fades out at the bottom edge instead of being cut off. */
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent);
+}
+
+/* The content keeps to the left, close to the icons, and stops at a comfortable reading width. */
+.floating-content .content-inner {
+  max-width: 880px;
+  margin: 0;
+}
+
+
+/* =========================
+   Workspace Switcher
+   ========================= */
+
+/* The tool tabs sit directly under the title bar as part of the same header, on the same surface. The page */
+/* scrolls in its own area below them. */
+.switcher {
+  position: absolute;
+  inset: var(--titlebar-height) 0 auto 0;
+  z-index: 20;
+  display: flex;
+  align-items: stretch;
+  height: var(--switcher-height);
+  padding: 0 var(--content-right) 0 var(--content-inset);
+  border-bottom: 1px solid var(--divider);
+}
+
+/* Without a tab bar, the empty state has that much more room to centre itself in. */
+.floating-content:not([data-switcher]) {
+  --switcher-offset: 0px;
+}
+
+.floating-content[data-switcher] {
+  top: calc(var(--titlebar-height) + var(--switcher-height));
+}
+
+.switcher-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-5);
+}
+
+.switcher-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.switcher-tab:hover,
+.switcher-tab[aria-selected="true"] {
+  color: var(--text);
+}
+
+/* The chosen tool is underlined with a thin line that sits on the divider and glides between tabs. */
+.switcher-tabs {
+  position: relative;
+}
+
+.switcher-line {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--ws);
+  transition: transform 220ms var(--ease), width 220ms var(--ease), background var(--transition);
+}
+
+.switcher-tab .network-indicator {
+  margin-left: 0;
+}
+
+
+/* =========================
+   Home
+   ========================= */
+
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 920px;
+}
+
+/* Introduction and main action on the left, the device ring on the right. */
+.home-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  align-items: start;
+  gap: var(--space-6);
+}
+
+/* The introduction stays level with the ring, however long the list under it grows. */
+.home-intro {
+  padding-top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.home-intro h1 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.home-intro p {
+  max-width: 44ch;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+.home-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-1);
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+}
+
+.home-start .button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.home-device {
+  justify-self: end;
+  margin-right: -44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.home-ring {
+  position: relative;
+}
+
+/* The button sits inside the ring, under the title. */
+.home-ring .button {
+  position: absolute;
+  top: 56%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.home-ring .button:active:not(:disabled) {
+  transform: translateX(-50%) scale(0.97);
+}
+
+.button-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.button-link:hover {
+  color: var(--ws-device);
+}
+
+.home-device-note[data-hidden] {
+  visibility: hidden;
+}
+
+.home-device-note {
+  min-height: 1.5em;
+  max-width: 30ch;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The latest result from each tool this session, one quiet row each. */
+.home-recent {
+  align-self: stretch;
+  margin-top: var(--space-3);
+  text-align: left;
+}
+
+.home-recent h2 {
+  margin-bottom: var(--space-2);
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.home-recent-empty {
+  margin: 0;
+  padding: var(--space-2);
+  color: var(--text-faint);
+}
+
+.home-recent ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-recent button {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-2);
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.home-recent button:hover {
+  background: var(--glass-hover);
+}
+
+/* The dot matches the ring segments. */
+.home-check-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--divider-strong);
+}
+
+.home-check-dot[data-status="ok"] {
+  background: var(--status-ok);
+}
+
+.home-check-dot[data-status="info"] {
+  background: var(--ring-info);
+}
+
+.home-check-dot[data-status="warning"] {
+  background: var(--status-warning);
+}
+
+.home-check-dot[data-status="risk"] {
+  background: var(--status-risk);
+}
+
+.home-check-dot[data-status="limited"],
+.home-check-dot[data-status="unknown"] {
+  background: var(--text-faint);
+}
+
+.home-recent-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.home-recent time {
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+}
+
+/* Two short ways in. Everything else is in the navigation above. */
+.home-more {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.home-more button {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-more button > svg {
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+
+.home-more button > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-more-name {
+  color: var(--text);
+  font-size: var(--text-base);
+  font-weight: 500;
+  transition: color var(--transition);
+}
+
+.home-more button:hover .home-more-name {
+  color: var(--accent);
+}
+
+/* Narrow windows put the ring under the introduction. */
+@media (max-width: 899px) {
+  .home-top {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+
+  .home-device {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+
+/* =========================
+   Device Ring
+   ========================= */
+
+.ring {
+  width: 380px;
+  max-width: 100%;
+  height: auto;
+}
+
+.ring-segment {
+  fill: none;
+  stroke: var(--divider-strong);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke var(--transition);
+}
+
+.ring-segment[data-status="ok"] {
+  stroke: var(--status-ok);
+}
+
+.ring-segment[data-status="info"] {
+  stroke: var(--ring-info);
+}
+
+.ring-segment[data-status="warning"] {
+  stroke: var(--status-warning);
+}
+
+.ring-segment[data-status="risk"] {
+  stroke: var(--status-risk);
+}
+
+/* Could not be read: plain grey with no glow, so it never looks like a result. */
+.ring-segment[data-status="limited"],
+.ring-segment[data-status="unknown"] {
+  stroke: var(--text-faint);
+}
+
+/* A result glows in its own colour. */
+.ring-segment[data-status="ok"] {
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--status-ok) 45%, transparent));
+}
+
+.ring-segment[data-status="info"] {
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--ring-info) 45%, transparent));
+}
+
+.ring-segment[data-status="warning"] {
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--status-warning) 45%, transparent));
+}
+
+.ring-segment[data-status="risk"] {
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--status-risk) 45%, transparent));
+}
+
+/* While the settings are being read, the segments brighten in turn. */
+.ring[data-phase="loading"] .ring-segment {
+  animation: ring-read 1.1s ease-in-out infinite;
+}
+
+@keyframes ring-read {
+  50% {
+    stroke: var(--text-muted);
+  }
+}
+
+/* A result draws its segment in, then the title settles. */
+.ring-segment[data-status="ok"],
+.ring-segment[data-status="info"],
+.ring-segment[data-status="warning"],
+.ring-segment[data-status="risk"] {
+  stroke-dasharray: 1 1;
+  animation: ring-draw 700ms cubic-bezier(0.3, 0.7, 0.2, 1) backwards;
+}
+
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+}
+
+.ring-title {
+  animation: ring-settle 260ms ease-out backwards;
+}
+
+@keyframes ring-settle {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.ring-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.ring-title {
+  fill: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+
+/* =========================
+   Results
+   ========================= */
+
+/* The shared result components lose their boxes: a finding becomes a section under a hairline. */
+:root[data-layout="floating"] .findings {
+  gap: var(--space-4);
+}
+
+:root[data-layout="floating"] .finding {
+  border: 0;
+  border-top: 1px solid var(--divider);
+  border-radius: 0;
+  background: none;
+}
+
+:root[data-layout="floating"] .finding-header {
+  padding: var(--space-3) 0 var(--space-2);
+}
+
+:root[data-layout="floating"] .finding-items li,
+:root[data-layout="floating"] .finding-urls li {
+  border-top-color: var(--divider);
+}
+
+:root[data-layout="floating"] .finding-note {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+/* "What to do" keeps its emphasis through a coloured edge, not a filled box. */
+:root[data-layout="floating"] .finding-action {
+  margin-right: 0;
+  margin-left: 0;
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
+  border-left: 2px solid var(--status-colour);
+  border-radius: 0;
+  background: none;
+}
+
+/* Technical tables get one quiet, even surface behind their rows, with no border, so values line up on */
+/* a steady background and the page does not fill with boxes. */
+:root[data-layout="floating"] .finding-items,
+:root[data-layout="floating"] .finding-urls {
+  margin-bottom: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 8px;
+  background: var(--glass-table);
+}
+
+:root[data-layout="floating"] .finding-items li:first-child,
+:root[data-layout="floating"] .finding-urls li:first-child {
+  border-top: 0;
+}
+
+/* Fields share one readable surface and a clearer edge. */
+:root[data-layout="floating"] .field input,
+:root[data-layout="floating"] .text-area {
+  border-color: var(--divider-strong);
+  background: var(--glass-field);
+}
+
+:root[data-layout="floating"] .field input::placeholder,
+:root[data-layout="floating"] .text-area::placeholder {
+  color: var(--text-faint);
+}
+
+:root[data-layout="floating"] .panel {
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+:root[data-layout="floating"] .panel .row {
+  padding-right: 0;
+  padding-left: 0;
+  border-top-color: var(--divider);
+}
+
+/* Notices use the same quiet surface as tables. */
+:root[data-layout="floating"] .notice {
+  border-color: var(--divider);
+  background: var(--glass-table);
+}
+
+:root[data-layout="floating"] .source-ask {
+  border-color: var(--divider-strong);
+}
+
+:root[data-layout="floating"] .button:not(.button-primary) {
+  border-color: var(--divider-strong);
+  background: var(--glass-field);
+}
+
+:root[data-layout="floating"] .button:not(.button-primary):hover {
+  background: var(--glass-hover);
+}
+
+:root[data-layout="floating"] .segmented {
+  border-color: var(--divider-strong);
+  background: var(--glass-field);
+}

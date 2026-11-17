@@ -45,8 +45,6 @@ export default function ToolPage({ tool, info, action, children }: ToolPageProps
         {action}
       </header>
 
-      {!info && <p className="notice">{tool.privacy}</p>}
-
       {children}
     </>
   );

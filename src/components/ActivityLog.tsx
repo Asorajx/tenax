@@ -1,5 +1,6 @@
-import { useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { Check, ChevronDown, Copy, SquareTerminal } from "lucide-react";
+import { useRecent, worstStatus } from "../app/recent";
 import type { Finding, Step } from "./Finding";
 
 /* =========================
@@ -64,6 +65,13 @@ function buildLog(title: string, findings: Finding[], seconds: number, result?: 
 /* A collapsed terminal-style record of what Tenax did. Technical details open per step. */
 export default function ActivityLog({ title, findings, seconds, footer, result }: ActivityLogProps) {
   const [copied, setCopied] = useState(false);
+
+  /* A log only appears with a result, so this is the moment to note it for the Home screen. */
+  const { record } = useRecent();
+  const status = worstStatus(findings.map((finding) => finding.status));
+  useEffect(() => {
+    record({ title, headline: result, status });
+  }, [record, title, result, status]);
   const [tab, setTab] = useState<Tab>(savedTab);
   const hasSteps = findings.some((finding) => finding.steps?.length);
 

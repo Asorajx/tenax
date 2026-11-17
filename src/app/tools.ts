@@ -21,10 +21,10 @@ export interface Tool {
   label: string;
   icon: LucideIcon;
   summary: string;
-  /* What the tool will check, shown until it is built. */
-  plan: string[];
   /* What leaves the device when the tool runs. */
   privacy: string;
+  /* What the tool cannot tell you, shown under About Tenax in Settings. */
+  limits: string;
   /* Whether the tool needs the network, or only uses it when asked. Left out for offline tools. */
   network?: "required" | "optional";
   ready: boolean;
@@ -46,12 +46,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: "Password Strength",
         icon: KeyRound,
         summary: "See how difficult your password is to guess and how to make it stronger.",
-        plan: [
-          "Length, character variety and common patterns",
-          "Matches against known weak passwords",
-          "Why each weakness makes guessing easier",
-        ],
         privacy: "Runs entirely on this device. The password is never stored or sent.",
+        limits: "Estimates password strength based on detectable patterns but cannot guarantee resistance to compromise.",
         ready: true,
       },
       {
@@ -59,12 +55,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: "Breached Passwords",
         icon: LockOpen,
         summary: "Check whether a password appears in known data breaches.",
-        plan: [
-          "Hash the password locally",
-          "Look up only the first 5 characters of the hash",
-          "Compare the returned matches on this device",
-        ],
         privacy: "Checks for known breaches by sharing only a small part of your password's digital fingerprint.",
+        limits: "Checks against the Have I Been Pwned breach database, which may not contain every compromised password.",
         network: "required",
         ready: true,
       },
@@ -79,12 +71,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: "URL Checker",
         icon: Link,
         summary: "Inspect a link for signs of phishing before opening it.",
-        plan: [
-          "Lookalike domains and misleading subdomains",
-          "Redirects, shorteners and unusual encoding",
-          "Reputation from an external service, if enabled",
-        ],
         privacy: "Runs entirely on this device. The address is never opened, followed or sent anywhere.",
+        limits: "Examines link addresses for suspicious patterns without visiting the website or checking its reputation, so it cannot verify where a link finally leads.",
         ready: true,
       },
       {
@@ -92,12 +80,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: "Email Scam Checker",
         icon: MailExclamationPoint,
         summary: "Review an email's text for common scam indicators.",
-        plan: [
-          "Urgency, threats and requests for payment or credentials",
-          "Mismatched sender names and link targets",
-          "Why each indicator is used by scammers",
-        ],
         privacy: "Runs entirely on this device. The email is never stored or sent.",
+        limits: "Looks for common scam signs in pasted text but cannot verify the sender.",
         ready: true,
       },
       {
@@ -105,12 +89,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: "Email Headers",
         icon: MailSearch,
         summary: "Read SPF, DKIM, DMARC and routing from raw headers.",
-        plan: [
-          "SPF, DKIM and DMARC results",
-          "The path the message took between servers",
-          "Mismatches between sender fields",
-        ],
         privacy: "Runs entirely on this device. The headers are never stored or sent.",
+        limits: "Reads authentication and routing information from email headers without independently verifying it.",
         ready: true,
       },
     ],
@@ -124,8 +104,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: "DNS Lookup",
         icon: Globe,
         summary: "Query DNS records for a domain.",
-        plan: ["A, AAAA, MX, TXT, NS and CNAME records", "Mail security records such as SPF and DMARC"],
         privacy: "Sends the domain name to the DNS server this PC already uses, which may pass it on, as it does for any website you visit. Nothing else leaves this PC. It needs network access to be on, but not necessarily an internet connection, since a DNS server on your own network can answer some names.",
+        limits: "Displays DNS records returned by your server, which do not establish whether a domain is trustworthy.",
         network: "required",
         ready: true,
       },
@@ -134,12 +114,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: "IP Information",
         icon: Network,
         summary: "See what kind of address an IP address is, and optionally who runs it.",
-        plan: [
-          "Address type, worked out on this PC",
-          "Reverse DNS through this PC's DNS server, if you ask",
-          "Owner, network and approximate location from ipinfo.io, only if you confirm",
-        ],
         privacy: "The address type is worked out on this PC. Reverse DNS sends the address to the DNS server this PC already uses. The owner and location lookup sends the address to ipinfo.io, an outside service, and only after you confirm it.",
+        limits: "Identifies IP address types. Ownership and location from the outside service may be approximate, and a reverse DNS name does not prove who owns an address.",
         network: "optional",
         ready: true,
       },
@@ -148,12 +124,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: "TLS Certificate",
         icon: FileBadge,
         summary: "Check a site's certificate and see what is wrong with it, if anything.",
-        plan: [
-          "Whether Windows accepts the certificate, with reasons if not",
-          "Names covered, dates, issuer, key and signature",
-          "Expired, self-signed, untrusted and mismatched certificates explained",
-        ],
-        privacy: "Connects to the site you enter, on port 443, and only makes a secure handshake. It sends no web request, downloads nothing and follows no redirects. The site can see this PC's internet address, as any website can. No other service is contacted.",
+        privacy: "Connects to the site you enter, on port 443, and only makes a secure handshake. It sends no web request, downloads nothing and follows no redirects. The server name is looked up through this PC's DNS server, and the site can see this PC's internet address, as any website can. No other service is contacted.",
+        limits: "Examines the server certificate and Windows trust evaluation. It does not check certificate revocation, and a trusted certificate does not establish website safety.",
         network: "required",
         ready: true,
       },
@@ -168,8 +140,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: "Windows Security",
         icon: MonitorCheck,
         summary: "Review antivirus, firewall and update settings on this PC.",
-        plan: [],
         privacy: "Reads settings on this device only. Nothing is changed or sent.",
+        limits: "Checks antivirus, firewall and Windows Update status only. Healthy settings do not guarantee device security.",
         ready: true,
       },
     ],

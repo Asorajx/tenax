@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { useState } from "react";
 
 /* =========================
@@ -26,7 +27,14 @@ export default function CopyButton({ text, ariaLabel }: CopyButtonProps) {
 
   return (
     <button type="button" className="button button-small" aria-label={ariaLabel} onClick={copy}>
-      {copied ? "Copied" : "Copy"}
+      {copied ? (
+        <span className="copied">
+          <Check size={12} strokeWidth={2.5} aria-hidden="true" />
+          Copied
+        </span>
+      ) : (
+        "Copy"
+      )}
     </button>
   );
 }

@@ -32,9 +32,6 @@ export default function TlsCertificate({ tool }: { tool: Tool }) {
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState("");
 
-  /* The privacy notice is shown until the first check has been asked for. */
-  const [noticeSeen, setNoticeSeen] = useState(false);
-
   /* Only the newest check may show its result, in case two are started close together. */
   const latest = useRef(0);
 
@@ -51,7 +48,6 @@ export default function TlsCertificate({ tool }: { tool: Tool }) {
   async function checkCertificate() {
     if (!enabled || !host.trim() || state === "loading") return;
     const mine = ++latest.current;
-    setNoticeSeen(true);
     setState("loading");
     const started = performance.now();
     try {
@@ -70,18 +66,9 @@ export default function TlsCertificate({ tool }: { tool: Tool }) {
   return (
     <ToolPage tool={tool} info={<p>{tool.privacy}</p>}>
       <NetworkNotice />
-      {noticeSeen ? (
-        <p className="network-note">
-          Uses the network: Tenax connects to the server you enter. Only public hosts on port 443 are allowed.
-        </p>
-      ) : (
-        <div className="notice" role="note">
-          <strong>This check connects to the server you enter.</strong> Reading a certificate means starting a secure
-          connection to that server, on port 443. Tenax only makes the handshake: it sends no web request, downloads
-          nothing and follows no redirects. The server can see this PC's internet address, as any website can. No other
-          service is contacted, and Tenax's other checks run offline.
-        </div>
-      )}
+      <p className="network-note">
+        Tenax connects to the server you enter to read its certificate. The server can see your public IP address.
+      </p>
 
       <form
         className="field"
@@ -130,7 +117,7 @@ export default function TlsCertificate({ tool }: { tool: Tool }) {
             findings={report.findings}
             seconds={seconds}
             result={report.verdict.headline}
-            footer="Connected to the server you entered · Secure handshake only · No web request sent"
+            footer="Connected to the server to read its certificate · No web request sent"
           />
         </>
       )}

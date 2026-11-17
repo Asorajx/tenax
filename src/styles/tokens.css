@@ -48,6 +48,7 @@
   /* Status colours are reserved for security findings. */
   --status-ok: #6fae86;
   --status-info: #9aa3ab;
+  --ring-info: #7aa7d9;
   --status-warning: #d9a441;
   --status-risk: #e0705f;
 
@@ -86,6 +87,7 @@
 
   --status-ok: #2f7a4d;
   --status-info: #57616a;
+  --ring-info: #3b6fb0;
   --status-warning: #8f6200;
   --status-risk: #b3402f;
 
@@ -96,4 +98,72 @@
   --terminal-muted: #48525a;
   --terminal-faint: #66707a;
   --terminal-prompt: #2f7479;
+}
+
+
+/* =========================
+   Glass Tokens
+   ========================= */
+
+/* Used by the floating layout. The whole window is one continuous surface: the veil is a single, even */
+/* tint laid over the Acrylic backdrop, so the icons and the content share the same background and */
+/* nothing sits in a box. The overlay is only the temporary expanded navigation. By default every */
+/* surface is solid, so nothing is see-through unless Windows has really given the window an Acrylic */
+/* backdrop (data-glass="on"). */
+:root {
+  --glass-veil: var(--bg);
+  --glass-overlay: var(--surface-raised);
+  --glass-field: var(--surface);
+  --glass-table: transparent;
+  --glass-hover: rgba(255, 255, 255, 0.07);
+  --divider: rgba(255, 255, 255, 0.12);
+  --divider-strong: rgba(255, 255, 255, 0.2);
+  --titlebar-height: 40px;
+  --switcher-height: 38px;
+  --page-margin: 28px;
+  --content-inset: clamp(32px, 7vw, 80px);
+  --content-right: clamp(28px, 4vw, 56px);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* One colour for each workspace. None is green, amber or red, which are kept for findings. */
+  --ws-investigate: #9aa8f0;
+  --ws-network: #6fb7bd;
+  --ws-passwords: #c9a0dd;
+  --ws-device: #8fb2d9;
+}
+
+:root[data-theme="light"] {
+  --glass-hover: rgba(0, 0, 0, 0.055);
+  --divider: rgba(0, 0, 0, 0.12);
+  --divider-strong: rgba(0, 0, 0, 0.22);
+
+  --ws-investigate: #4f5fc4;
+  --ws-network: #2f7479;
+  --ws-passwords: #87499f;
+  --ws-device: #3b6a9c;
+}
+
+/* Secondary text is brighter in the floating layout, since it sits over a translucent window. */
+:root[data-layout="floating"] {
+  --text-muted: #b9c1c9;
+  --text-faint: #a0aab3;
+}
+
+:root[data-layout="floating"][data-theme="light"] {
+  --text-muted: #3a444d;
+  --text-faint: #4a545e;
+}
+
+:root[data-layout="floating"][data-glass="on"] {
+  --glass-veil: rgba(16, 18, 20, 0.8);
+  --glass-overlay: rgba(26, 29, 33, 0.97);
+  --glass-field: rgba(255, 255, 255, 0.075);
+  --glass-table: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-layout="floating"][data-glass="on"][data-theme="light"] {
+  --glass-veil: rgba(246, 248, 249, 0.82);
+  --glass-overlay: rgba(255, 255, 255, 0.97);
+  --glass-field: rgba(0, 0, 0, 0.05);
+  --glass-table: rgba(0, 0, 0, 0.035);
 }

@@ -1,5 +1,5 @@
 // The global network-access switch. It is off every time Tenax starts, and it only turns on
-// when the user turns it on in the sidebar. Every command that connects to something outside
+// when the user turns it on with the Network access control. Every command that connects to something outside
 // this PC goes through it, so a tool cannot go online while it is off, whatever the interface does.
 //
 // Turning it off also stops work that is already running:
@@ -28,7 +28,7 @@ static WAITING: Mutex<Vec<Weak<Mutex<Option<Waker>>>>> = Mutex::new(Vec::new());
 
 // What a tool says when it is asked to go online while the switch is off.
 const OFF_MESSAGE: &str =
-    "Network access is off. Turn it on in the sidebar to use connected analysis.";
+    "Network access is off. Turn on Network access to use connected analysis.";
 
 // What a tool says when the switch is turned off while it is working.
 const CANCELLED_MESSAGE: &str = "Cancelled: network access was turned off.";

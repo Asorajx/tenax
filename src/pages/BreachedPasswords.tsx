@@ -62,6 +62,9 @@ export default function BreachedPasswords({ tool, onCheckStrength }: BreachedPas
   return (
     <ToolPage tool={tool} info={<p>{tool.privacy}</p>}>
       <NetworkNotice />
+      <p className="network-note">
+        Sends the first 5 characters of the password's hash to Have I Been Pwned. The password itself is never sent.
+      </p>
       <PasswordField value={password} onChange={changePassword} onSubmit={runCheck}>
         <button
           type="submit"
@@ -96,7 +99,7 @@ export default function BreachedPasswords({ tool, onCheckStrength }: BreachedPas
             title="Breached Passwords"
             findings={findings}
             seconds={seconds}
-            footer="Only a partial hash (5 characters) was sent · Password never transmitted"
+            footer="First 5 characters of the password's hash sent to Have I Been Pwned · Password not sent"
           />
         </>
       )}

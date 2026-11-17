@@ -90,7 +90,7 @@ export default function EmailHeaders({ tool }: { tool: Tool }) {
             title="Email Headers"
             findings={findings}
             seconds={seconds}
-            footer="Analysed on this device · Headers not stored · No data transmitted"
+            footer="Checked locally · No data sent"
           />
         </>
       )}
