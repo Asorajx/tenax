@@ -31,7 +31,7 @@ const PRIVACY = [
   },
   {
     title: "Data storage",
-    text: "Tenax saves only your theme, layout and log tab choices. What you enter, results and recent activity stay in memory until the app is closed.",
+    text: "Tenax saves only your theme and log tab choices. What you enter, results and recent activity stay in memory until the app is closed.",
   },
 ];
 

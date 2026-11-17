@@ -4,7 +4,7 @@ import { useNetwork } from "../app/network";
    Network Notice
    ========================= */
 
-/* Shown on a tool that needs the network while the sidebar switch is off. */
+/* Shown on a tool that needs the network while the network switch is off. */
 export default function NetworkNotice() {
   const { enabled, setEnabled } = useNetwork();
   if (enabled) return null;

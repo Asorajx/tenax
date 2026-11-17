@@ -1,16 +1,14 @@
 import { useEffect } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { Effect, getCurrentWindow } from "@tauri-apps/api/window";
-import type { Layout } from "./layout";
 import type { Theme } from "./theme";
 
 /* =========================
    Window Mode
    ========================= */
 
-/* The floating layout draws its own title bar and asks Windows for an Acrylic backdrop. The classic */
-/* layout uses the normal Windows title bar and no backdrop. The window starts hidden, so this is */
-/* settled before it appears, and a failure at any step only leaves the solid look. */
+/* Tenax draws its own title bar and asks Windows for an Acrylic backdrop. The window starts hidden, */
+/* so this is settled before it appears, and a failure at any step only leaves the solid look. */
 
 /* Whether the user has asked Windows for less transparency. Acrylic is then not requested. */
 function prefersSolid() {
@@ -20,12 +18,12 @@ function prefersSolid() {
   );
 }
 
-/* Sets data-glass on <html>. "on" lets the floating styles show the window behind through the app. */
+/* Sets data-glass on <html>. "on" lets the styles show the window behind through the app. */
 function setGlass(on: boolean) {
   document.documentElement.dataset.glass = on ? "on" : "off";
 }
 
-async function apply(layout: Layout, theme: Theme) {
+async function apply(theme: Theme) {
   setGlass(false);
   if (!isTauri()) return;
 
@@ -38,15 +36,10 @@ async function apply(layout: Layout, theme: Theme) {
   }
 
   try {
-    if (layout === "floating") {
-      await win.setDecorations(false);
-      if (!prefersSolid()) {
-        await win.setEffects({ effects: [Effect.Acrylic] });
-        setGlass(true);
-      }
-    } else {
-      await win.setDecorations(true);
-      await win.setEffects({ effects: [] });
+    await win.setDecorations(false);
+    if (!prefersSolid()) {
+      await win.setEffects({ effects: [Effect.Acrylic] });
+      setGlass(true);
     }
   } catch {
     /* Acrylic is not available here, so the app stays solid. */
@@ -54,15 +47,15 @@ async function apply(layout: Layout, theme: Theme) {
   }
 }
 
-/* Applies the window mode whenever the layout or theme changes, then shows the window. */
-export function useWindowMode(layout: Layout, theme: Theme) {
+/* Applies the window mode whenever the theme changes, then shows the window. */
+export function useWindowMode(theme: Theme) {
   useEffect(() => {
     let cancelled = false;
-    apply(layout, theme).finally(() => {
+    apply(theme).finally(() => {
       if (!cancelled && isTauri()) getCurrentWindow().show().catch(() => {});
     });
     return () => {
       cancelled = true;
     };
-  }, [layout, theme]);
+  }, [theme]);
 }

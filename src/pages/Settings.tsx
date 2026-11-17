@@ -1,4 +1,3 @@
-import type { Layout } from "../app/layout";
 import { SETTINGS_TABS } from "../app/settingsTabs";
 import type { Theme } from "../app/theme";
 import About from "./About";
@@ -13,37 +12,25 @@ const THEMES: { value: Theme; label: string }[] = [
   { value: "system", label: "System" },
 ];
 
-const LAYOUTS: { value: Layout; label: string }[] = [
-  { value: "classic", label: "Classic" },
-  { value: "floating", label: "Floating" },
-];
-
 const SHORTCUTS = [
   { keys: "Ctrl + 1", action: "Home" },
-  { keys: "Ctrl + 2 to 5", action: "First tool in each group" },
+  { keys: "Ctrl + 2 to 5", action: "Switch between workspaces" },
   { keys: "Ctrl + Tab", action: "Next section (Shift for previous)" },
   { keys: "Ctrl + F", action: "Find in page" },
   { keys: "Ctrl + ,", action: "Settings" },
   { keys: "Ctrl + Shift + L", action: "Switch between light and dark" },
+  { keys: "Left / Right", action: "Move through the navigation" },
 ];
-
-/* The keys for moving through the navigation depend on the layout. */
-const MOVE_KEYS = {
-  classic: { keys: "Up / Down", action: "Move through the sidebar" },
-  floating: { keys: "Left / Right", action: "Move through the navigation" },
-};
 
 interface SettingsProps {
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
-  layout: Layout;
-  onLayoutChange: (layout: Layout) => void;
   /* The section that is open, chosen in the tab bar. */
   tab: string;
   onTabChange: (tab: string) => void;
 }
 
-export default function Settings({ theme, onThemeChange, layout, onLayoutChange, tab, onTabChange }: SettingsProps) {
+export default function Settings({ theme, onThemeChange, tab, onTabChange }: SettingsProps) {
   return (
     <>
       <header className="page-header">
@@ -88,30 +75,12 @@ export default function Settings({ theme, onThemeChange, layout, onLayoutChange,
                       ))}
                     </div>
                   </div>
-                  <div className="row">
-                    <span className="row-text">
-                      <span className="row-title" id="layout-label">Layout</span>
-                    </span>
-                    <div className="segmented" role="radiogroup" aria-labelledby="layout-label">
-                      {LAYOUTS.map((option) => (
-                        <label key={option.value}>
-                          <input
-                            type="radio"
-                            name="layout"
-                            checked={layout === option.value}
-                            onChange={() => onLayoutChange(option.value)}
-                          />
-                          {option.label}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               </section>
               <section className="section">
                 <h2>Keyboard shortcuts</h2>
                 <div className="panel">
-                  {[...SHORTCUTS, MOVE_KEYS[layout]].map((shortcut) => (
+                  {SHORTCUTS.map((shortcut) => (
                     <div key={shortcut.keys} className="row">
                       <span>{shortcut.action}</span>
                       <kbd>{shortcut.keys}</kbd>

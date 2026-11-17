@@ -1,19 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useLayout } from "./app/layout";
+import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "./app/theme";
 import { useWindowMode } from "./app/window";
 import { useLastTools, workspaceOf, WORKSPACES } from "./app/workspaces";
-import { ALL_TOOLS, TOOL_GROUPS } from "./app/tools";
+import { ALL_TOOLS } from "./app/tools";
 import FindBar from "./components/FindBar";
 import FloatingShell from "./components/floating/FloatingShell";
-import Sidebar from "./components/Sidebar";
 import BreachedPasswords from "./pages/BreachedPasswords";
 import DnsLookup from "./pages/DnsLookup";
 import IpInformation from "./pages/IpInformation";
 import TlsCertificate from "./pages/TlsCertificate";
 import EmailHeaders from "./pages/EmailHeaders";
 import EmailScam from "./pages/EmailScam";
-import Home from "./pages/Home";
 import HomeMinimal from "./pages/HomeMinimal";
 import PasswordStrength from "./pages/PasswordStrength";
 import Settings from "./pages/Settings";
@@ -24,12 +21,9 @@ import WindowsSecurity from "./pages/WindowsSecurity";
    App
    ========================= */
 
-/* Ctrl + 1 opens Home, Ctrl + 2 to 5 open the first tool of each group, or of each workspace in the */
-/* floating layout. Ctrl + Tab and Ctrl + Shift + Tab go round those five in order. */
-const SHORTCUT_PAGES = {
-  classic: ["home", ...TOOL_GROUPS.map((group) => group.tools[0].id)],
-  floating: ["home", ...WORKSPACES.map((workspace) => workspace.tools[0].id)],
-};
+/* Ctrl + 1 opens Home, Ctrl + 2 to 5 open the first tool of each workspace. Ctrl + Tab and */
+/* Ctrl + Shift + Tab go round those five in order. */
+const SHORTCUT_PAGES = ["home", ...WORKSPACES.map((workspace) => workspace.tools[0].id)];
 
 export default function App() {
   /* The current page is plain state, so no router is needed. */
@@ -40,9 +34,8 @@ export default function App() {
   /* The section of Settings that is open. */
   const [settingsTab, setSettingsTab] = useState("general");
 
-  /* The layout is chosen in Settings. The window follows it: its title bar and backdrop. */
-  const [layout, setLayout] = useLayout();
-  useWindowMode(layout, theme);
+  /* The window follows the theme: its title bar and backdrop. */
+  useWindowMode(theme);
 
   /* A value sent from one tool to another, such as a password or a link. It is kept in memory */
   /* only, and cleared as soon as the other tool has it. */
@@ -62,24 +55,22 @@ export default function App() {
     function onKeyDown(event: KeyboardEvent) {
       if (!event.ctrlKey || event.altKey) return;
 
-      const shortcutPage = SHORTCUT_PAGES[layout][Number(event.key) - 1];
+      const shortcutPage = SHORTCUT_PAGES[Number(event.key) - 1];
       if (event.key === "Tab") {
-        /* Round the five sections: Home, then the four groups. From Settings, forwards goes to Home and */
-        /* backwards to the last one. The floating layout comes back to the tool last open in a workspace. */
-        const sections = SHORTCUT_PAGES[layout];
+        /* Round the five sections: Home, then the four workspaces. From Settings, forwards goes to Home and */
+        /* backwards to the last one. A workspace comes back to the tool last open in it. */
+        const sections = SHORTCUT_PAGES;
         const here =
           page === "home"
             ? 0
-            : layout === "floating"
-              ? WORKSPACES.findIndex((workspace) => workspace.id === workspaceOf(page)?.id) + 1 || -1
-              : TOOL_GROUPS.findIndex((group) => group.tools.some((tool) => tool.id === page)) + 1 || -1;
+            : WORKSPACES.findIndex((workspace) => workspace.id === workspaceOf(page)?.id) + 1 || -1;
         const next =
           here === -1
             ? event.shiftKey
               ? sections.length - 1
               : 0
             : (here + (event.shiftKey ? -1 : 1) + sections.length) % sections.length;
-        setPage(layout === "floating" && next > 0 ? toolFor(WORKSPACES[next - 1].id) : sections[next]);
+        setPage(next > 0 ? toolFor(WORKSPACES[next - 1].id) : sections[next]);
       } else if (event.shiftKey && event.key.toLowerCase() === "l") {
         setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
       } else if (event.key === ",") {
@@ -94,31 +85,21 @@ export default function App() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [setTheme, layout, page, toolFor]);
+  }, [setTheme, page, toolFor]);
 
   /* Every page that has been opened stays loaded, so a tool keeps its results */
   /* when you switch to another page and come back. */
   const [opened, setOpened] = useState([page]);
   if (!opened.includes(page)) setOpened([...opened, page]);
 
-  /* Each newly shown page starts scrolled to the top. */
-  const content = useRef<HTMLElement>(null);
-  useEffect(() => {
-    content.current?.scrollTo(0, 0);
-  }, [page]);
-
   function renderPage(id: string) {
     const tool = ALL_TOOLS.find((candidate) => candidate.id === id);
 
     if (id === "home") {
-      return layout === "floating" ? (
-        <HomeMinimal onOpen={(workspace) => setPage(toolFor(workspace))} onOpenTool={setPage} />
-      ) : (
-        <Home onNavigate={setPage} />
-      );
+      return <HomeMinimal onOpen={(workspace) => setPage(toolFor(workspace))} onOpenTool={setPage} />;
     }
     if (id === "settings") {
-      return <Settings theme={theme} onThemeChange={setTheme} layout={layout} onLayoutChange={setLayout} tab={settingsTab} onTabChange={setSettingsTab} />;
+      return <Settings theme={theme} onThemeChange={setTheme} tab={settingsTab} onTabChange={setSettingsTab} />;
     }
     if (tool?.id === "url-check") {
       return (
@@ -144,33 +125,18 @@ export default function App() {
     return null;
   }
 
-  /* The pages are the same in both layouts. Only the frame around them differs. */
   const pages = opened.map((id) => (
     <div key={id} className="content-inner" hidden={id !== page}>
       {renderPage(id)}
     </div>
   ));
 
-  if (layout === "floating") {
-    return (
-      <>
-        <FloatingShell page={page} onNavigate={setPage} toolFor={toolFor}>
-          {pages}
-        </FloatingShell>
-        <FindBar />
-      </>
-    );
-  }
-
   return (
-    <div className="app">
-      <Sidebar page={page} onNavigate={setPage} />
-
-      <main className="content" ref={content}>
+    <>
+      <FloatingShell page={page} onNavigate={setPage} toolFor={toolFor}>
         {pages}
-      </main>
-
+      </FloatingShell>
       <FindBar />
-    </div>
+    </>
   );
 }

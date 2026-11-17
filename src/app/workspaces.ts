@@ -7,7 +7,7 @@ import { TOOL_GROUPS, type Tool } from "./tools";
    ========================= */
 
 /* A workspace groups related tools. Its tools come from the same list as everywhere else, so there is */
-/* still one place that says which tools exist. Only the floating layout uses workspaces. */
+/* still one place that says which tools exist. */
 export interface Workspace {
   id: string;
   label: string;

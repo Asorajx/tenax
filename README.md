@@ -24,10 +24,10 @@ Checks run on the device wherever possible, and each tool states what leaves the
 
 - Desktop application for Windows
 - Read-only Windows security check for antivirus, firewall and Windows Update
-- Sidebar navigation grouped by tool type
+- Floating navigation grouped by workspace
 - Consistent findings layout with expandable technical details
 - Light, dark and system themes
-- Keyboard shortcuts and sidebar keyboard navigation
+- Keyboard shortcuts and keyboard navigation
 - Privacy note on every tool
 - Responsive layout for different window sizes
 

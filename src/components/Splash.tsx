@@ -41,7 +41,7 @@ export default function Splash() {
 
   return (
     <div className="splash" data-leaving={stage === "leave" || undefined} aria-hidden="true">
-      {/* Same shapes as the sidebar mark. The bar zooms in, the stem hits it, then the shield is revealed. */}
+      {/* Same shapes as the title bar mark. The bar zooms in, the stem hits it, then the shield is revealed. */}
       <div className="splash-logo">
         <svg className="splash-mark" viewBox="11 12 42 41">
           <path

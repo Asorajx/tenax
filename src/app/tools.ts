@@ -15,7 +15,7 @@ import {
    Tool Registry
    ========================= */
 
-/* The sidebar, home page and shortcuts are all built from this list. */
+/* The navigation, home page and shortcuts are all built from this list. */
 export interface Tool {
   id: string;
   label: string;

@@ -2,8 +2,7 @@
    Floating Layout
    ========================= */
 
-/* Everything here applies only while <html> has data-layout="floating". Deleting this file, and the */
-/* components in src/components/floating, removes the layout. The classic styles are not touched. */
+/* Everything here applies while <html> has data-layout="floating", which index.html sets. */
 
 /* The window itself is see-through, so the page must not paint its own background. The veil below */
 /* does that, and is solid unless Windows has given the window an Acrylic backdrop. */

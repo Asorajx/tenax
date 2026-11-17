@@ -17,8 +17,8 @@ interface FloatingShellProps {
   children: ReactNode;
 }
 
-/* One seamless window: the title bar, which holds the navigation, and the content below it. The classic */
-/* sidebar layout is not used here, and none of the tools know which layout they are in. */
+/* One seamless window: the title bar, which holds the navigation, and the content below it. None of */
+/* the tools know about the frame around them. */
 export default function FloatingShell({ page, onNavigate, toolFor, children }: FloatingShellProps) {
   const workspace = workspaceOf(page);
 
