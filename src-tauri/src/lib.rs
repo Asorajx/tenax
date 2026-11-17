@@ -5,6 +5,7 @@ mod email_scam;
 mod finding;
 mod ip_info;
 mod network;
+mod qr_scam;
 mod tls_check;
 mod url_check;
 mod windows_security;
@@ -38,6 +39,7 @@ pub fn run() {
             tls_check::check_tls,
             network::network_access,
             network::set_network_access,
+            qr_scam::check_qr,
             url_check::check_url,
             windows_security::check_windows_security,
             windows_security::settings::open_settings

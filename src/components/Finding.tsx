@@ -92,9 +92,11 @@ interface FindingCardProps {
   link?: FindingLink;
   /* Sends an address to the URL Checker. The button only appears when this is given. */
   onAnalyseUrl?: (url: string) => void;
+  /* Opens a card that would otherwise be folded to one row, for a card whose details are the point. */
+  expanded?: boolean;
 }
 
-export default function FindingCard({ finding, link, onAnalyseUrl }: FindingCardProps) {
+export default function FindingCard({ finding, link, onAnalyseUrl, expanded }: FindingCardProps) {
   const status = STATUSES[finding.status];
   /* A check with nothing wrong and nothing to switch on or off is folded to one row. Anything that */
   /* needs a look, has something to do, shows on and off states, or lists links stays open. */
@@ -170,7 +172,7 @@ export default function FindingCard({ finding, link, onAnalyseUrl }: FindingCard
 
   if (foldable) {
     return (
-      <details className="finding" data-status={finding.status} data-finding={finding.id}>
+      <details className="finding" data-status={finding.status} data-finding={finding.id} open={expanded}>
         <summary className="finding-header">{header}</summary>
         {body}
       </details>

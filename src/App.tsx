@@ -13,6 +13,7 @@ import EmailHeaders from "./pages/EmailHeaders";
 import EmailScam from "./pages/EmailScam";
 import HomeMinimal from "./pages/HomeMinimal";
 import PasswordStrength from "./pages/PasswordStrength";
+import QrChecker from "./pages/QrChecker";
 import Settings from "./pages/Settings";
 import UrlChecker from "./pages/UrlChecker";
 import WindowsSecurity from "./pages/WindowsSecurity";
@@ -118,6 +119,7 @@ export default function App() {
         />
       );
     }
+    if (tool?.id === "qr-check") return <QrChecker tool={tool} />;
     if (tool?.id === "dns-lookup") return <DnsLookup tool={tool} />;
     if (tool?.id === "ip-info") return <IpInformation tool={tool} />;
     if (tool?.id === "tls-check") return <TlsCertificate tool={tool} />;

@@ -23,6 +23,7 @@ Checks run on the device wherever possible, and each tool states what leaves the
 ## Features
 
 - Desktop application for Windows
+- QR code checker that reads a code from an image and checks it on the device, without opening it
 - Read-only Windows security check for antivirus, firewall, Windows Update, Secure Boot, TPM, drive encryption, User Account Control, remote access and automatic sign-in
 - Floating navigation grouped by workspace
 - Consistent findings layout with expandable technical details

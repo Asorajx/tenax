@@ -1297,3 +1297,15 @@ summary.finding-header:hover .finding-chevron {
   background-color: #ffd600;
   color: #111111;
 }
+
+
+/* =========================
+   QR Code Checker
+   ========================= */
+
+/* Holds the picker, the start screen and the results, spaced like the page around it. */
+.qr-checker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}

@@ -8,6 +8,7 @@ import {
   MailSearch,
   MonitorCheck,
   Network,
+  QrCode,
   type LucideIcon,
 } from "lucide-react";
 
@@ -73,6 +74,15 @@ export const TOOL_GROUPS: ToolGroup[] = [
         summary: "Inspect a link for signs of phishing before opening it.",
         privacy: "Runs entirely on this device. The address is never opened, followed or sent anywhere.",
         limits: "Examines link addresses for suspicious patterns without visiting the website or checking its reputation, so it cannot verify where a link finally leads.",
+        ready: true,
+      },
+      {
+        id: "qr-check",
+        label: "QR Code Checker",
+        icon: QrCode,
+        summary: "Read a QR code image and check what it holds before you scan it.",
+        privacy: "Runs entirely on this device. The image is read in memory and never saved or sent, and nothing in the code is opened.",
+        limits: "Reads what a code contains and checks any link's address for scam signs without visiting it, so it cannot see where a short link finally leads. It cannot tell whether a sticker has been placed over a genuine code, and a code written in an unusual text encoding may not be readable.",
         ready: true,
       },
       {

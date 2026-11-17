@@ -329,7 +329,7 @@ fn verdict(cards: &[Finding]) -> Verdict {
     }
 }
 
-fn analyse(input: &str) -> Result<UrlReport, String> {
+pub(crate) fn analyse(input: &str) -> Result<UrlReport, String> {
     let started = Instant::now();
     let (address, assumed) = normalise(input)?;
 
