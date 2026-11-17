@@ -23,7 +23,7 @@ Checks run on the device wherever possible, and each tool states what leaves the
 ## Features
 
 - Desktop application for Windows
-- Read-only Windows security check for antivirus, firewall, Windows Update, Secure Boot, TPM, User Account Control, remote access and automatic sign-in
+- Read-only Windows security check for antivirus, firewall, Windows Update, Secure Boot, TPM, drive encryption, User Account Control, remote access and automatic sign-in
 - Floating navigation grouped by workspace
 - Consistent findings layout with expandable technical details
 - Light, dark and system themes

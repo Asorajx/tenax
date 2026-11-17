@@ -6,7 +6,8 @@
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use windows::Win32::Foundation::{
-    CloseHandle, E_FAIL, ERROR_FILE_NOT_FOUND, ERROR_SERVICE_DOES_NOT_EXIST, HANDLE,
+    CloseHandle, E_FAIL, ERROR_FILE_NOT_FOUND, ERROR_NOT_FOUND, ERROR_SERVICE_DOES_NOT_EXIST,
+    HANDLE, PROPERTYKEY,
 };
 use windows::Win32::NetworkManagement::IpHelper::{
     GetExtendedTcpTable, MIB_TCP6ROW_OWNER_PID, MIB_TCPROW_OWNER_PID, TCP_TABLE_OWNER_PID_LISTENER,
@@ -21,6 +22,7 @@ use windows::Win32::Security::{
     TOKEN_QUERY, TokenElevationType, TokenElevationTypeFull, TokenElevationTypeLimited,
     WinBuiltinAdministratorsSid,
 };
+use windows::Win32::System::Com::StructuredStorage::PropVariantToInt64;
 use windows::Win32::System::Com::{
     CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx,
     CoUninitialize,
@@ -43,14 +45,16 @@ use windows::Win32::System::TpmBaseServices::{TPM_DEVICE_INFO, Tbsi_GetDeviceInf
 use windows::Win32::System::UpdateAgent::{
     AutomaticUpdates, IAutomaticUpdates2, ISystemInformation, SystemInformation,
 };
-use windows::Win32::System::Variant::{VARIANT, VT_DATE};
+use windows::Win32::System::Variant::{VARIANT, VT_DATE, VT_EMPTY, VT_NULL};
+use windows::Win32::UI::Shell::PropertiesSystem::PSGetPropertyKeyFromName;
+use windows::Win32::UI::Shell::{IShellItem2, SHCreateItemFromParsingName};
 use windows::core::{PCWSTR, Result, w};
 
 use crate::finding::Step;
 
 use super::{
-    Account, FirewallProfiles, ProductState, Readings, RemoteAccess, RemoteDesktop, SecureBoot,
-    SecurityProduct, ServiceState, Uac, UpdateStatus,
+    Account, DriveEncryption, EncryptionState, FirewallProfiles, ProductState, Readings,
+    RemoteAccess, RemoteDesktop, SecureBoot, SecurityProduct, ServiceState, Uac, UpdateStatus,
 };
 
 // Each step is tagged with the id of the finding it belongs to.
@@ -157,6 +161,15 @@ pub fn read() -> (Readings, Steps) {
             "registry HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon (AutoAdminLogon). The saved password is never read.",
             auto_sign_in,
             |on| format!("Automatic sign-in {}", if *on { "on" } else { "off" }),
+        ),
+        drive_encryption: traced(
+            &mut steps,
+            "encryption",
+            "Asked Windows whether the drive that holds Windows is encrypted",
+            "Checked whether the drive that holds Windows is protected by BitLocker or Device encryption",
+            "Shell SHCreateItemFromParsingName > IShellItem2::GetProperty(System.Volume.BitLockerProtection); Service Control Manager (BDESVC)",
+            drive_encryption,
+            |found| format!("{} {:?}", found.drive, found.state),
         ),
     };
 
@@ -626,4 +639,56 @@ fn auto_sign_in() -> Result<bool> {
         w!("AutoAdminLogon"),
     )?;
     Ok(value.as_deref() == Some("1"))
+}
+
+// =========================
+// Drive encryption
+// =========================
+
+// Reads the state Windows shows for the drive that holds Windows, as Chromium does: the property of
+// the drive's shell item. It needs no administrator rights, unlike asking BitLocker directly. The
+// property is not in Microsoft's documentation, but Windows lists its values itself
+// (System.Volume.BitLockerProtection, read from the property system on this PC); see
+// EncryptionState::from_code. A drive with no value at all is NotReported, and never a state.
+// Asking the This PC folder for the same detail was tried and rejected: it answers 0 where there
+// is no value, which cannot be told from a real 0.
+fn drive_encryption() -> Result<DriveEncryption> {
+    let drive = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
+    let path: Vec<u16> = format!("{drive}\\")
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let reading = unsafe {
+        let item: IShellItem2 = SHCreateItemFromParsingName(PCWSTR(path.as_ptr()), None)?;
+        let mut key = PROPERTYKEY::default();
+        PSGetPropertyKeyFromName(w!("System.Volume.BitLockerProtection"), &mut key)?;
+        item.GetProperty(&key)
+    };
+
+    let state = match reading {
+        // No value, or no such property for this item: Windows has not said anything.
+        Err(error) if error.code() == ERROR_NOT_FOUND.to_hresult() => EncryptionState::NotReported,
+        Err(error) => return Err(error),
+        Ok(value) if matches!(value.vt(), VT_EMPTY | VT_NULL) => EncryptionState::NotReported,
+        Ok(value) => {
+            let code = unsafe { PropVariantToInt64(&value) }
+                .ok()
+                .and_then(|n| u32::try_from(n).ok());
+            match code {
+                Some(code) => EncryptionState::from_code(code),
+                None => {
+                    return Err(windows::core::Error::new(
+                        E_FAIL,
+                        "Windows gave the encryption state in a form Tenax does not read.",
+                    ));
+                }
+            }
+        }
+    };
+    Ok(DriveEncryption {
+        drive,
+        state,
+        service: service_state(w!("BDESVC"))?,
+    })
 }

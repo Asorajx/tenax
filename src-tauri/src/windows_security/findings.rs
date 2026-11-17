@@ -3,8 +3,8 @@
 // There is no Windows code here, so every case can be tested with made-up readings.
 
 use super::{
-    Account, FirewallProfiles, ProductState, Readings, RemoteAccess, SecureBoot, SecurityProduct,
-    ServiceState, Uac, UpdateStatus,
+    Account, DriveEncryption, EncryptionState, FirewallProfiles, ProductState, Readings,
+    RemoteAccess, SecureBoot, SecurityProduct, ServiceState, Uac, UpdateStatus,
 };
 use crate::finding::{Detail, Finding, Status, detail, join_names, switch};
 
@@ -17,6 +17,7 @@ pub fn build(readings: &Readings) -> Vec<Finding> {
         firewall(&readings.firewall, &readings.other_firewalls),
         updates(&readings.updates),
         startup(&readings.secure_boot, &readings.tpm),
+        encryption(&readings.drive_encryption),
         uac(&readings.uac),
         remote_access(&readings.remote_access),
         sign_in(&readings.auto_sign_in),
@@ -781,6 +782,150 @@ fn sign_in(reading: &Result<bool, String>) -> Finding {
 }
 
 // =========================
+// Drive encryption
+// =========================
+
+const ENCRYPTION: Check = Check {
+    id: "encryption",
+    title: "Drive encryption",
+    checked: "I asked Windows whether the drive that holds Windows is encrypted, by BitLocker \
+              or Device encryption. I read the state Windows shows for the drive, which needs \
+              no administrator rights.",
+    why: "Encryption keeps your files unreadable if this PC is lost or stolen.",
+};
+
+fn encryption(reading: &Result<DriveEncryption, String>) -> Finding {
+    let found = match reading {
+        Ok(found) => found,
+        Err(error) => {
+            return ENCRYPTION.could_not_check(
+                "Open Settings, choose Privacy & security, then Device encryption.",
+                error,
+            );
+        }
+    };
+    let drive = &found.drive;
+    let label = format!("System drive ({drive})");
+    let settings = "Open Settings, choose Privacy & security, then Device encryption, or \
+                    BitLocker on Windows Pro.";
+
+    // Added to every card where Tenax cannot say whether the drive is encrypted.
+    const UNDETERMINED: &str = "Tenax cannot tell whether this drive is encrypted. That does not \
+                                mean it is unprotected.";
+
+    let mut finding = match found.state {
+        EncryptionState::On => ENCRYPTION.finding(
+            Status::Ok,
+            format!("On · {drive}"),
+            None,
+            vec![switch(&label, "Encrypted", true)],
+        ),
+        EncryptionState::Off => ENCRYPTION.finding(
+            Status::Info,
+            format!("Off · {drive}"),
+            Some(format!("{settings} Keep the recovery key somewhere safe.")),
+            vec![switch(&label, "Not encrypted", false)],
+        ),
+        // Part of the drive is not encrypted yet, so it is shown as off and never as protected.
+        EncryptionState::Encrypting => ENCRYPTION.finding(
+            Status::Info,
+            format!("Encrypting · {drive} · not finished"),
+            None,
+            vec![switch(&label, "Being encrypted, not finished", false)],
+        ),
+        EncryptionState::Decrypting => ENCRYPTION.finding(
+            Status::Info,
+            format!("Decrypting · {drive} · not finished"),
+            Some("If you did not start this, turn encryption back on in Settings.".to_string()),
+            vec![switch(&label, "Being decrypted, not finished", false)],
+        ),
+        EncryptionState::Suspended => ENCRYPTION.finding(
+            Status::Warning,
+            format!("Suspended · {drive}"),
+            Some(format!("{settings} Resume protection there.")),
+            vec![switch(&label, "Encrypted, protection suspended", false)],
+        ),
+        EncryptionState::WaitingForActivation => ENCRYPTION.finding(
+            Status::Warning,
+            format!("Waiting for activation · {drive}"),
+            Some(format!("{settings} Finish turning it on there.")),
+            vec![switch(&label, "Encrypted, protection not active", false)],
+        ),
+        EncryptionState::Locked => ENCRYPTION.finding(
+            Status::Limited,
+            format!("Locked · {drive}"),
+            Some(settings.to_string()),
+            vec![detail(&label, "Locked")],
+        ),
+        EncryptionState::NotEncryptable => ENCRYPTION.finding(
+            Status::Info,
+            "Not available for this drive",
+            None,
+            vec![detail(&label, "Windows says it cannot be encrypted")],
+        ),
+        // Windows gave no value at all. This is not the same as the value 0, which is shown below.
+        EncryptionState::NotReported if found.service == ServiceState::NotInstalled => ENCRYPTION
+            .finding(
+                Status::Info,
+                "BitLocker is not installed",
+                None,
+                vec![
+                    detail(&label, "No state reported"),
+                    detail("BitLocker service", "Not installed"),
+                ],
+            ),
+        EncryptionState::NotReported => ENCRYPTION.finding(
+            Status::Limited,
+            "No state reported",
+            Some(settings.to_string()),
+            vec![detail(&label, "Windows gave no state for this drive")],
+        ),
+        // A code that is not on Windows' own list, including a real 0.
+        EncryptionState::Unrecognised(code) => ENCRYPTION.finding(
+            Status::Limited,
+            "State not recognised",
+            Some(settings.to_string()),
+            vec![detail(&label, format!("Windows reported code {code}"))],
+        ),
+    };
+
+    finding.note = Some(match (found.state, found.service) {
+        (EncryptionState::On, _) => {
+            "Windows reports this drive as encrypted. Tenax does not check where the recovery \
+             key is kept."
+                .to_string()
+        }
+        (EncryptionState::Off, _) => {
+            "Windows Home only offers Device encryption, and only on PCs that support it."
+                .to_string()
+        }
+        (EncryptionState::Encrypting, _) => {
+            "Until encryption finishes, part of the drive is not encrypted.".to_string()
+        }
+        (EncryptionState::Decrypting, _) => "Part of the drive is no longer encrypted.".to_string(),
+        (EncryptionState::Suspended, _) | (EncryptionState::WaitingForActivation, _) => {
+            "The drive is encrypted, but its key is stored in the clear, so protection is off \
+             until it is resumed."
+                .to_string()
+        }
+        (EncryptionState::NotReported, ServiceState::NotInstalled) => {
+            "Windows gave no encryption state for the drive, and the BitLocker service is not \
+             installed on this PC."
+                .to_string()
+        }
+        (EncryptionState::NotEncryptable, _) => {
+            "Windows says this drive cannot be encrypted.".to_string()
+        }
+        (EncryptionState::NotReported, _) => UNDETERMINED.to_string(),
+        (EncryptionState::Locked, _) => UNDETERMINED.to_string(),
+        (EncryptionState::Unrecognised(code), _) => format!(
+            "Windows reported code {code}, which is not one of the states it lists. {UNDETERMINED}"
+        ),
+    });
+    finding
+}
+
+// =========================
 // Tests
 // =========================
 
@@ -818,6 +963,15 @@ mod tests {
             uac: Ok(uac_with(5, true, Account::Administrator)),
             remote_access: Ok(remote_off()),
             auto_sign_in: Ok(false),
+            drive_encryption: Ok(encrypted(EncryptionState::On)),
+        }
+    }
+
+    fn encrypted(state: EncryptionState) -> DriveEncryption {
+        DriveEncryption {
+            drive: "C:".to_string(),
+            state,
+            service: ServiceState::Running,
         }
     }
 
@@ -840,7 +994,7 @@ mod tests {
     #[test]
     fn healthy_pc_has_no_issues() {
         let findings = build(&healthy());
-        assert_eq!(findings.len(), 7);
+        assert_eq!(findings.len(), 8);
         assert!(findings.iter().all(|finding| finding.status == Status::Ok));
         assert!(findings.iter().all(|finding| finding.action.is_none()));
     }
@@ -1017,6 +1171,7 @@ mod tests {
             uac: Err("Access is denied.".to_string()),
             remote_access: Err("Access is denied.".to_string()),
             auto_sign_in: Err("Access is denied.".to_string()),
+            drive_encryption: Err("Access is denied.".to_string()),
         };
         let findings = build(&readings);
         assert!(
@@ -1052,6 +1207,7 @@ mod tests {
             vec![
                 Status::Risk,
                 Status::Warning,
+                Status::Ok,
                 Status::Ok,
                 Status::Ok,
                 Status::Ok,
@@ -1237,6 +1393,141 @@ mod tests {
         assert_eq!(remote_access(&Ok(remote_off())).status, Status::Ok);
     }
 
+    fn drive_status(state: EncryptionState) -> Status {
+        encryption(&Ok(encrypted(state))).status
+    }
+
+    fn row_is_on(state: EncryptionState) -> Option<bool> {
+        encryption(&Ok(encrypted(state))).details[0].active
+    }
+
+    #[test]
+    fn windows_codes_map_to_the_states_windows_lists() {
+        let expected = [
+            (1, EncryptionState::On),
+            (2, EncryptionState::Off),
+            (3, EncryptionState::Encrypting),
+            (4, EncryptionState::Decrypting),
+            (5, EncryptionState::Suspended),
+            (6, EncryptionState::Locked),
+            (7, EncryptionState::NotEncryptable),
+            (8, EncryptionState::WaitingForActivation),
+        ];
+        for (code, state) in expected {
+            assert_eq!(EncryptionState::from_code(code), state);
+        }
+        // A real 0 and anything else is kept as a code, never turned into a state.
+        for code in [0, 9, 100, u32::MAX] {
+            assert_eq!(
+                EncryptionState::from_code(code),
+                EncryptionState::Unrecognised(code)
+            );
+        }
+    }
+
+    #[test]
+    fn an_encrypted_drive_is_fine() {
+        let finding = encryption(&Ok(encrypted(EncryptionState::On)));
+        assert_eq!(finding.status, Status::Ok);
+        assert_eq!(finding.summary, "On · C:");
+        assert!(finding.action.is_none());
+        assert!(finding.note.unwrap().contains("recovery key"));
+    }
+
+    #[test]
+    fn a_drive_that_is_off_is_a_note_not_a_warning() {
+        let finding = encryption(&Ok(encrypted(EncryptionState::Off)));
+        assert_eq!(finding.status, Status::Info);
+        assert!(finding.action.is_some());
+        assert!(finding.note.unwrap().contains("Windows Home"));
+    }
+
+    #[test]
+    fn only_a_fully_encrypted_drive_is_ok() {
+        for state in [
+            EncryptionState::Off,
+            EncryptionState::Encrypting,
+            EncryptionState::Decrypting,
+            EncryptionState::Suspended,
+            EncryptionState::Locked,
+            EncryptionState::NotEncryptable,
+            EncryptionState::WaitingForActivation,
+            EncryptionState::NotReported,
+            EncryptionState::Unrecognised(0),
+            EncryptionState::Unrecognised(42),
+        ] {
+            assert_ne!(drive_status(state), Status::Ok, "{state:?}");
+        }
+    }
+
+    #[test]
+    fn a_change_in_progress_is_never_shown_as_protected() {
+        for state in [EncryptionState::Encrypting, EncryptionState::Decrypting] {
+            let finding = encryption(&Ok(encrypted(state)));
+            assert_eq!(finding.status, Status::Info);
+            assert!(finding.summary.contains("not finished"));
+            assert_eq!(row_is_on(state), Some(false));
+        }
+    }
+
+    #[test]
+    fn protection_that_is_not_active_is_a_warning() {
+        // Encrypted, but the key is stored in the clear, so the data can be read.
+        assert_eq!(drive_status(EncryptionState::Suspended), Status::Warning);
+        assert_eq!(
+            drive_status(EncryptionState::WaitingForActivation),
+            Status::Warning
+        );
+        assert_eq!(row_is_on(EncryptionState::Suspended), Some(false));
+    }
+
+    #[test]
+    fn no_value_and_a_value_of_zero_are_both_limited_but_explained_differently() {
+        let none = encryption(&Ok(encrypted(EncryptionState::NotReported)));
+        let zero = encryption(&Ok(encrypted(EncryptionState::Unrecognised(0))));
+        assert_eq!(none.status, Status::Limited);
+        assert_eq!(zero.status, Status::Limited);
+        assert_eq!(none.summary, "No state reported");
+        assert_eq!(zero.summary, "State not recognised");
+        assert!(none.details[0].value.contains("no state"));
+        assert!(zero.details[0].value.contains("code 0"));
+        // Both say plainly that Tenax cannot tell, and neither suggests the drive is unprotected.
+        for finding in [none, zero] {
+            let note = finding.note.unwrap();
+            assert!(note.contains("cannot tell whether this drive is encrypted"));
+            assert!(note.contains("does not mean it is unprotected"));
+        }
+    }
+
+    #[test]
+    fn no_value_is_only_explained_by_a_missing_service_when_the_service_is_missing() {
+        let missing = DriveEncryption {
+            service: ServiceState::NotInstalled,
+            ..encrypted(EncryptionState::NotReported)
+        };
+        let finding = encryption(&Ok(missing));
+        assert_eq!(finding.status, Status::Info);
+        assert_eq!(finding.summary, "BitLocker is not installed");
+
+        // A stopped service is not a missing one, and a real 0 is never explained this way.
+        let stopped = DriveEncryption {
+            service: ServiceState::Stopped,
+            ..encrypted(EncryptionState::NotReported)
+        };
+        assert_eq!(encryption(&Ok(stopped)).status, Status::Limited);
+        let zero = DriveEncryption {
+            service: ServiceState::NotInstalled,
+            ..encrypted(EncryptionState::Unrecognised(0))
+        };
+        assert_eq!(encryption(&Ok(zero)).status, Status::Limited);
+    }
+
+    #[test]
+    fn a_failed_encryption_reading_is_never_reported_as_ok() {
+        let finding = encryption(&Err("Access is denied.".to_string()));
+        assert_eq!(finding.status, Status::Unknown);
+    }
+
     #[test]
     fn automatic_sign_in_is_a_warning_only_when_it_is_on() {
         assert_eq!(sign_in(&Ok(true)).status, Status::Warning);
@@ -1252,6 +1543,7 @@ mod tests {
             .map(|finding| finding.id)
             .collect();
         for step_id in [
+            "encryption",
             "antivirus",
             "firewall",
             "updates",
@@ -1259,6 +1551,7 @@ mod tests {
             "uac",
             "remote",
             "signin",
+            "encryption",
         ] {
             assert!(ids.iter().any(|id| id == step_id), "{step_id}");
         }
@@ -1275,6 +1568,7 @@ mod tests {
         println!("uac: {:?}", readings.uac);
         println!("remote_access: {:?}", readings.remote_access);
         println!("auto_sign_in: {:?}", readings.auto_sign_in);
+        println!("drive_encryption: {:?}", readings.drive_encryption);
         // Ports 135 and 445 normally listen on Windows, so seeing them shows the table is read correctly.
         println!(
             "listening v4: {:?}",

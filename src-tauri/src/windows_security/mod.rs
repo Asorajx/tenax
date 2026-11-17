@@ -98,6 +98,49 @@ pub struct RemoteAccess {
     pub ssh: ServiceState,
 }
 
+// What Windows reports for the drive that holds Windows. The meanings are the ones Windows itself
+// lists for the property. A code that is not on that list is kept as it is and never guessed at.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EncryptionState {
+    On,
+    Off,
+    Encrypting,
+    Decrypting,
+    Suspended,
+    Locked,
+    NotEncryptable,
+    WaitingForActivation,
+    // Windows gave no value at all for the drive. This is not the same as a value of 0.
+    NotReported,
+    Unrecognised(u32),
+}
+
+impl EncryptionState {
+    // The values are the ones Windows lists for the property. Chromium reads the same property.
+    pub fn from_code(code: u32) -> EncryptionState {
+        match code {
+            1 => EncryptionState::On,
+            2 => EncryptionState::Off,
+            3 => EncryptionState::Encrypting,
+            4 => EncryptionState::Decrypting,
+            5 => EncryptionState::Suspended,
+            6 => EncryptionState::Locked,
+            7 => EncryptionState::NotEncryptable,
+            8 => EncryptionState::WaitingForActivation,
+            other => EncryptionState::Unrecognised(other),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DriveEncryption {
+    // Such as "C:".
+    pub drive: String,
+    pub state: EncryptionState,
+    // The BitLocker service. It is not installed on editions without BitLocker or Device encryption.
+    pub service: ServiceState,
+}
+
 // Each check can fail on its own, so one failure does not hide the others.
 pub struct Readings {
     pub antivirus: Result<Vec<SecurityProduct>, String>,
@@ -111,6 +154,7 @@ pub struct Readings {
     pub uac: Result<Uac, String>,
     pub remote_access: Result<RemoteAccess, String>,
     pub auto_sign_in: Result<bool, String>,
+    pub drive_encryption: Result<DriveEncryption, String>,
 }
 
 // Called from the interface with invoke("check_windows_security").
