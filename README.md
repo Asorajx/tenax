@@ -1,5 +1,7 @@
 # Tenax
 
+**Download:** get the latest installer from the [Releases page](https://github.com/Asorajx/tenax/releases).
+
 Tenax is a Windows desktop cybersecurity toolkit that brings practical security checks together in one application.
 
 It explains what was detected, why it matters and what to do next. It does not give security scores or claim that anything is safe.
