@@ -113,3 +113,7 @@ cargo test
 ```
 
 If PowerShell blocks npm, use `npm.cmd` instead of `npm`.
+
+## Documentation
+
+Full project report: [P06-tenax.md](docs/P06-tenax.md)
