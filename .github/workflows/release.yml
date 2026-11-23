@@ -36,4 +36,4 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Tenax ${{ github.ref_name }}
           releaseDraft: true
-          prerelease: true
+          prerelease: false
