@@ -4,7 +4,7 @@
 
 use super::{
     Account, DriveEncryption, EncryptionState, FirewallProfiles, ProductState, Readings,
-    RemoteAccess, SecureBoot, SecurityProduct, ServiceState, Uac, UpdateStatus,
+    RemoteAccess, SecureBoot, SecurityProduct, ServiceState, TamperProtection, Uac, UpdateStatus,
 };
 use crate::finding::{Detail, Finding, Status, detail, join_names, switch};
 
@@ -13,7 +13,7 @@ const STALE_CHECK_DAYS: f64 = 7.0;
 
 pub fn build(readings: &Readings) -> Vec<Finding> {
     let mut findings = vec![
-        antivirus(&readings.antivirus),
+        antivirus_and_tamper_protection(&readings.antivirus, &readings.tamper_protection),
         firewall(&readings.firewall, &readings.other_firewalls),
         updates(&readings.updates),
         sign_in(&readings.auto_sign_in),
@@ -208,6 +208,46 @@ fn antivirus(reading: &Result<Vec<SecurityProduct>, String>) -> Finding {
 
     // One active, up-to-date antivirus is enough. The rows below show which product it is.
     ANTIVIRUS.finding(Status::Ok, "Active", None, details)
+}
+
+// Tamper Protection only matters when Microsoft Defender is the product doing the protecting,
+// so it is left out when another antivirus has taken over.
+fn antivirus_and_tamper_protection(
+    products: &Result<Vec<SecurityProduct>, String>,
+    tamper: &Result<TamperProtection, String>,
+) -> Finding {
+    let mut finding = antivirus(products);
+    let defender_running = products
+        .iter()
+        .flatten()
+        .any(|product| product.name.contains("Defender") && product.state == ProductState::On);
+    if !defender_running || !matches!(finding.status, Status::Ok | Status::Warning) {
+        return finding;
+    }
+
+    match tamper {
+        Ok(TamperProtection::On) => finding
+            .details
+            .push(switch("Tamper Protection", "On", true)),
+        Ok(TamperProtection::Off) => {
+            finding
+                .details
+                .push(switch("Tamper Protection", "Off", false));
+            if finding.status == Status::Ok {
+                finding.status = Status::Warning;
+                finding.summary = "Tamper Protection off".to_string();
+                finding.action = Some(
+                    "Open Windows Security, choose Virus & threat protection, then Manage \
+                     settings, and turn on Tamper Protection."
+                        .to_string(),
+                );
+            }
+        }
+        _ => finding
+            .details
+            .push(detail("Tamper Protection", "Could not read")),
+    }
+    finding
 }
 
 // =========================
@@ -951,6 +991,7 @@ mod tests {
     fn healthy() -> Readings {
         Readings {
             antivirus: Ok(vec![product("Windows Defender", ProductState::On)]),
+            tamper_protection: Ok(TamperProtection::On),
             firewall: Ok(FirewallProfiles {
                 domain: true,
                 private: true,
@@ -1169,6 +1210,7 @@ mod tests {
     fn failed_check_is_never_reported_as_ok() {
         let readings = Readings {
             antivirus: Err("Access is denied.".to_string()),
+            tamper_protection: Err("Access is denied.".to_string()),
             firewall: Err("Access is denied.".to_string()),
             other_firewalls: Err("Access is denied.".to_string()),
             updates: Err("Access is denied.".to_string()),
@@ -1220,6 +1262,41 @@ mod tests {
                 Status::Ok,
                 Status::Ok
             ]
+        );
+    }
+
+    #[test]
+    fn tamper_protection_off_is_a_warning_only_for_defender() {
+        let defender = || Ok(vec![product("Windows Defender", ProductState::On)]);
+
+        let on = antivirus_and_tamper_protection(&defender(), &Ok(TamperProtection::On));
+        assert_eq!(on.status, Status::Ok);
+        assert_eq!(on.details.last().unwrap().label, "Tamper Protection");
+
+        let off = antivirus_and_tamper_protection(&defender(), &Ok(TamperProtection::Off));
+        assert_eq!(off.status, Status::Warning);
+
+        // Not reading it never raises a warning.
+        let unknown =
+            antivirus_and_tamper_protection(&defender(), &Ok(TamperProtection::NotReported));
+        assert_eq!(unknown.status, Status::Ok);
+        let failed = antivirus_and_tamper_protection(&defender(), &Err("Denied".to_string()));
+        assert_eq!(failed.status, Status::Ok);
+
+        // Another antivirus has taken over, so Defender's setting is not shown.
+        let norton = antivirus_and_tamper_protection(
+            &Ok(vec![
+                product("Norton 360", ProductState::On),
+                product("Windows Defender", ProductState::Off),
+            ]),
+            &Ok(TamperProtection::Off),
+        );
+        assert_eq!(norton.status, Status::Ok);
+        assert!(
+            norton
+                .details
+                .iter()
+                .all(|item| item.label != "Tamper Protection")
         );
     }
 

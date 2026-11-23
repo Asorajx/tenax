@@ -1,5 +1,5 @@
-// Windows Security check: reads antivirus, firewall, Windows Update, Secure Boot, TPM, drive
-// encryption, User Account Control, remote access and automatic sign-in settings.
+// Windows Security check: reads antivirus (with Tamper Protection), firewall, Windows Update,
+// Secure Boot, TPM, drive encryption, User Account Control, remote access and automatic sign-in settings.
 // Nothing is changed on the PC.
 //
 // reader.rs   talks to Windows and returns raw values
@@ -26,6 +26,14 @@ pub struct SecurityProduct {
     pub name: String,
     pub state: ProductState,
     pub definitions_up_to_date: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TamperProtection {
+    On,
+    Off,
+    // Windows gave no value, or one Tenax does not recognise.
+    NotReported,
 }
 
 pub struct FirewallProfiles {
@@ -147,6 +155,7 @@ pub struct DriveEncryption {
 // Each check can fail on its own, so one failure does not hide the others.
 pub struct Readings {
     pub antivirus: Result<Vec<SecurityProduct>, String>,
+    pub tamper_protection: Result<TamperProtection, String>,
     pub firewall: Result<FirewallProfiles, String>,
     // Firewalls from other products, such as a security suite.
     pub other_firewalls: Result<Vec<SecurityProduct>, String>,

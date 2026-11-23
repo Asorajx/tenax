@@ -54,7 +54,8 @@ use crate::finding::Step;
 
 use super::{
     Account, DriveEncryption, EncryptionState, FirewallProfiles, ProductState, Readings,
-    RemoteAccess, RemoteDesktop, SecureBoot, SecurityProduct, ServiceState, Uac, UpdateStatus,
+    RemoteAccess, RemoteDesktop, SecureBoot, SecurityProduct, ServiceState, TamperProtection, Uac,
+    UpdateStatus,
 };
 
 // Each step is tagged with the id of the finding it belongs to.
@@ -74,6 +75,15 @@ pub fn read() -> (Readings, Steps) {
             "COM WSCProductList > IWSCProductList::Initialize(WSC_SECURITY_PROVIDER_ANTIVIRUS),              Count, get_Item, ProductName, ProductState, SignatureStatus",
             || products(WSC_SECURITY_PROVIDER_ANTIVIRUS),
             |found| format!("{} product(s) registered", found.len()),
+        ),
+        tamper_protection: traced(
+            &mut steps,
+            "antivirus",
+            "Read the Tamper Protection setting",
+            "Checked whether Microsoft Defender stops other programs from switching its protection off",
+            "registry HKLM\\SOFTWARE\\Microsoft\\Windows Defender\\Features (TamperProtection)",
+            tamper_protection,
+            |state| format!("{state:?}"),
         ),
         firewall: traced(
             &mut steps,
@@ -322,6 +332,25 @@ fn days_since(date: &VARIANT) -> Option<f64> {
         .as_secs_f64();
     let now = seconds / SECONDS_PER_DAY + DAYS_FROM_1899_TO_1970;
     Some((now - then).max(0.0))
+}
+
+// =========================
+// Tamper Protection
+// =========================
+
+// Windows does not document these numbers. 1 was read on a PC that reports Tamper Protection on,
+// and 4 and 5 are the off and on values Microsoft has used in the past. Anything else is not guessed at.
+fn tamper_protection() -> Result<TamperProtection> {
+    let value = registry_number(
+        HKEY_LOCAL_MACHINE,
+        w!(r"SOFTWARE\Microsoft\Windows Defender\Features"),
+        w!("TamperProtection"),
+    )?;
+    Ok(match value {
+        Some(1) | Some(5) => TamperProtection::On,
+        Some(4) => TamperProtection::Off,
+        _ => TamperProtection::NotReported,
+    })
 }
 
 // =========================
