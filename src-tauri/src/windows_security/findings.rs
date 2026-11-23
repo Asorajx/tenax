@@ -16,15 +16,21 @@ pub fn build(readings: &Readings) -> Vec<Finding> {
         antivirus(&readings.antivirus),
         firewall(&readings.firewall, &readings.other_firewalls),
         updates(&readings.updates),
+        sign_in(&readings.auto_sign_in),
+        remote_access(&readings.remote_access),
+        uac(&readings.uac),
         startup(&readings.secure_boot, &readings.tpm),
         encryption(&readings.drive_encryption),
-        uac(&readings.uac),
-        remote_access(&readings.remote_access),
-        sign_in(&readings.auto_sign_in),
     ];
 
-    // Most serious first.
-    findings.sort_by_key(|finding| finding.status);
+    // Most serious first, then in the order above. Drive encryption that could not be
+    // read (common on Windows Home) goes last, since it is not a finding.
+    findings.sort_by_key(|finding| {
+        (
+            finding.id == ENCRYPTION.id && finding.status == Status::Limited,
+            finding.status,
+        )
+    });
     findings
 }
 
@@ -1215,6 +1221,18 @@ mod tests {
                 Status::Ok
             ]
         );
+    }
+
+    #[test]
+    fn unreadable_drive_encryption_comes_last() {
+        let mut readings = healthy();
+        readings.drive_encryption = Ok(DriveEncryption {
+            service: ServiceState::Stopped,
+            ..encrypted(EncryptionState::NotReported)
+        });
+        let findings = build(&readings);
+        assert_eq!(findings.last().unwrap().id, "encryption");
+        assert_eq!(findings.last().unwrap().status, Status::Limited);
     }
 
     fn uac_with(prompt: u32, secure_desktop: bool, account: Account) -> Uac {
